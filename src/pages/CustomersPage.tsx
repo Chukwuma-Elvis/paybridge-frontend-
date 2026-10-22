@@ -317,20 +317,28 @@ export const CustomersPage: React.FC = () => {
     }
   };
 
-  const handleUpdateKyc = async (customerId: string, nextTier: 'BASIC' | 'FULL') => {
+  const handleUpdateKyc = async (customerId: string, nextTier: 'UNVERIFIED' | 'BASIC' | 'FULL') => {
     try {
       const res = await apiRequest({
         method: 'PATCH',
         path: `/api/customers/${customerId}/kyc-tier`,
         body: { kycTier: nextTier },
-        label: `Upgrade customer KYC to ${nextTier}`,
+        label: `Update customer KYC to ${nextTier}`,
       });
 
+      const updated = res.data;
       setCustomersList((prev) =>
-        prev.map((c) => (c.id === customerId ? { ...c, kycTier: res.data.kycTier } : c))
+        prev.map((c) => (c.id === customerId ? { ...c, kycTier: updated.kycTier } : c))
       );
 
-      toast.success(`KYC tier upgraded to ${nextTier}`);
+      session.addRecentEntity({
+        id: customerId,
+        label: `${updated.firstName} ${updated.lastName}`,
+        type: 'customer',
+        details: updated,
+      });
+
+      toast.success(`KYC tier updated to ${nextTier}`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -419,7 +427,7 @@ export const CustomersPage: React.FC = () => {
                 options={[
                   { label: '-- Choose Customer --', value: '' },
                   ...customersList.map((c) => ({
-                    label: `${c.firstName || 'Customer'} ${c.lastName || ''} (${c.email || c.id.substring(0, 8)})`,
+                    label: `${c.firstName || 'Customer'} ${c.lastName || ''} (${c.email || c.id.substring(0, 8)}) • ${c.kycTier || 'UNVERIFIED'}`,
                     value: c.id,
                   })),
                 ]}
@@ -544,21 +552,23 @@ export const CustomersPage: React.FC = () => {
 
       {/* Customer Registry List with KYC */}
       {customersList.length > 0 && (
-        <Card title="Customer Identity & KYC Tier" subtitle="Change tiers to test USD daily transaction limits">
+        <Card title="Customer Identity & KYC Tier" subtitle="Manage customer KYC tiers and limits">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-3 py-2 font-medium">Customer Name</th>
                   <th className="px-3 py-2 font-medium">Email / Phone</th>
-                  <th className="px-3 py-2 font-medium">KYC Tier</th>
+                  <th className="px-3 py-2 font-medium">Current KYC Tier</th>
+                  <th className="px-3 py-2 font-medium">Change Tier</th>
                   <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Actions</th>
+                  <th className="px-3 py-2 font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {customersList.map((c) => {
                   const isSelected = selectedCustomerId === c.id;
+                  const currentTier = c.kycTier || 'UNVERIFIED';
                   return (
                     <tr key={c.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-900/60 ${isSelected ? 'bg-blue-50/30 dark:bg-blue-950/20' : ''}`}>
                       <td className="px-3 py-2 font-semibold flex items-center gap-1.5">
@@ -569,16 +579,28 @@ export const CustomersPage: React.FC = () => {
                         {c.email} {c.phone ? `• ${c.phone}` : ''}
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant={c.kycTier === 'FULL' ? 'success' : c.kycTier === 'BASIC' ? 'accent' : 'neutral'} size="sm">
-                          {c.kycTier || 'UNVERIFIED'}
+                        <Badge variant={currentTier === 'FULL' ? 'success' : currentTier === 'BASIC' ? 'accent' : 'neutral'} size="sm">
+                          {currentTier}
                         </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          aria-label={`Change KYC tier for ${c.firstName} ${c.lastName}`}
+                          value={currentTier}
+                          onChange={(e) => handleUpdateKyc(c.id, e.target.value as 'UNVERIFIED' | 'BASIC' | 'FULL')}
+                          className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer font-medium"
+                        >
+                          <option value="UNVERIFIED">UNVERIFIED (₦50k/day)</option>
+                          <option value="BASIC">BASIC (₦500k/day)</option>
+                          <option value="FULL">FULL (₦10m/day)</option>
+                        </select>
                       </td>
                       <td className="px-3 py-2">
                         <Badge variant="success" size="sm">
                           {c.status || 'ACTIVE'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 text-right space-x-1.5">
+                      <td className="px-3 py-2 text-right">
                         <Button
                           size="sm"
                           variant={isSelected ? 'secondary' : 'outline'}
@@ -587,16 +609,6 @@ export const CustomersPage: React.FC = () => {
                         >
                           {isSelected ? 'Selected' : 'Select Customer'}
                         </Button>
-                        {c.kycTier !== 'BASIC' && (
-                          <Button size="sm" variant="ghost" onClick={() => handleUpdateKyc(c.id, 'BASIC')}>
-                            Tier: BASIC
-                          </Button>
-                        )}
-                        {c.kycTier !== 'FULL' && (
-                          <Button size="sm" variant="outline" onClick={() => handleUpdateKyc(c.id, 'FULL')}>
-                            Tier: FULL
-                          </Button>
-                        )}
                       </td>
                     </tr>
                   );
