@@ -36,6 +36,20 @@ const STORAGE_KEY_RECENT_URLS = 'paybridge_recent_backend_urls';
 const STORAGE_KEY_AUTO_WAKE = 'paybridge_auto_wake';
 const SESSION_KEY_API_KEY = 'paybridge_session_api_key';
 const SESSION_KEY_ROLE = 'paybridge_session_role';
+const STORAGE_KEY_RECENT_ENTITIES = 'paybridge_recent_entities';
+
+function loadInitialRecentEntities(): RecentEntity[] {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY_RECENT_ENTITIES);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
 
 function loadInitialBackendUrl(): string {
   try {
@@ -86,7 +100,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     keyRole: initialKey.role,
     rememberKeyInSession: Boolean(initialKey.key),
     autoWake: localStorage.getItem(STORAGE_KEY_AUTO_WAKE) !== 'false',
-    recentEntities: [],
+    recentEntities: loadInitialRecentEntities(),
 
     setBackendUrl: (urlInput: string) => {
       const validation = validateBackendAddress(urlInput);
@@ -114,6 +128,11 @@ export const useSessionStore = create<SessionState>((set, get) => {
           // ignore
         }
 
+        try {
+          sessionStorage.removeItem(STORAGE_KEY_RECENT_ENTITIES);
+        } catch {
+          // ignore
+        }
         set({
           backendUrl: normalized,
           recentUrls: recent,
@@ -199,12 +218,23 @@ export const useSessionStore = create<SessionState>((set, get) => {
         ...entity,
         createdAt: new Date().toISOString(),
       };
-      set((state) => ({
-        recentEntities: [full, ...state.recentEntities.filter((e) => e.id !== entity.id)].slice(0, 50),
-      }));
+      set((state) => {
+        const updated = [full, ...state.recentEntities.filter((e) => e.id !== entity.id)].slice(0, 50);
+        try {
+          sessionStorage.setItem(STORAGE_KEY_RECENT_ENTITIES, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return { recentEntities: updated };
+      });
     },
 
     clearRecentEntities: () => {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY_RECENT_ENTITIES);
+      } catch {
+        // ignore
+      }
       set({ recentEntities: [] });
     },
   };
