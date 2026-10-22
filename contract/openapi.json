@@ -1,0 +1,3659 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PayBridge API",
+    "description": "Sandbox: pretend bank, partner and rate source. Click Authorize and paste an API key.",
+    "version": "1"
+  },
+  "servers": [
+    {
+      "url": "https://paybridge.onrender.com",
+      "description": "Default production server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKey": []
+    }
+  ],
+  "paths": {
+    "/actuator/health": {
+      "get": {
+        "summary": "Health probe",
+        "operationId": "getHealth",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator/metrics": {
+      "get": {
+        "summary": "Application metrics",
+        "operationId": "getMetrics",
+        "responses": {
+          "200": {
+            "description": "Metrics summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/customers": {
+      "post": {
+        "summary": "Create customer",
+        "operationId": "createCustomer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Customer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/customers/{id}": {
+      "get": {
+        "summary": "Get customer by id",
+        "operationId": "getCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/customers/{id}/kyc-tier": {
+      "patch": {
+        "summary": "Update customer KYC tier",
+        "operationId": "updateKycTier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKycTierRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KYC tier updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/accounts": {
+      "post": {
+        "summary": "Open account",
+        "operationId": "openAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      },
+      "get": {
+        "summary": "List accounts for customer",
+        "operationId": "listAccountsForCustomer",
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accounts list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccountResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{id}": {
+      "get": {
+        "summary": "Get account by id",
+        "operationId": "getAccount",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/accounts/by-number/{accountNumber}": {
+      "get": {
+        "summary": "Get account by account number",
+        "operationId": "getAccountByNumber",
+        "parameters": [
+          {
+            "name": "accountNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/accounts/{accountId}/entries": {
+      "get": {
+        "summary": "Account ledger entries statement",
+        "operationId": "getAccountEntries",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ledger statement entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StatementLineResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/dev/accounts/{accountId}/fund": {
+      "post": {
+        "summary": "Dev funding for customer account",
+        "operationId": "devFundAccount",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Funding successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/transfers/internal": {
+      "post": {
+        "summary": "Internal transfer between accounts",
+        "operationId": "transferInternal",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalTransferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transfer completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Replayed transfer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/transfers/{id}": {
+      "get": {
+        "summary": "Get transfer by id",
+        "operationId": "getTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transfer details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/transfers": {
+      "get": {
+        "summary": "List transfers for account",
+        "operationId": "listTransfersForAccount",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transfers list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/beneficiaries/resolve": {
+      "post": {
+        "summary": "Resolve beneficiary bank account name",
+        "operationId": "resolveBeneficiary",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBeneficiaryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedAccount"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/beneficiaries": {
+      "post": {
+        "summary": "Save beneficiary",
+        "operationId": "createBeneficiary",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBeneficiaryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Beneficiary saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BeneficiaryView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      },
+      "get": {
+        "summary": "List beneficiaries for customer",
+        "operationId": "listBeneficiaries",
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Beneficiary list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BeneficiaryView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers/external": {
+      "post": {
+        "summary": "External bank transfer",
+        "operationId": "transferExternal",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalTransferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Transfer accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Replayed transfer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "List customer notifications",
+        "operationId": "listNotifications",
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fx/rates/{corridor}": {
+      "get": {
+        "summary": "Current rate for corridor",
+        "operationId": "getCurrentFxRate",
+        "parameters": [
+          {
+            "name": "corridor",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Corridor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current rate info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentRate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fx/quotes": {
+      "post": {
+        "summary": "Create FX quote",
+        "operationId": "createQuote",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Quote created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Replayed quote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/fx/quotes/{id}": {
+      "get": {
+        "summary": "Get quote by id",
+        "operationId": "getQuote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quote details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/fx/conversions/{quoteId}": {
+      "get": {
+        "summary": "Get conversion for quote",
+        "operationId": "getConversion",
+        "parameters": [
+          {
+            "name": "quoteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversion details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversion"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/admin/fx/rates": {
+      "get": {
+        "summary": "Recent FX rates (admin)",
+        "operationId": "listAdminFxRates",
+        "parameters": [
+          {
+            "name": "corridor",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Corridor",
+              "default": "USD_NGN"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of rates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RateResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Set manual rate (admin)",
+        "operationId": "setManualRate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualRateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rate created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/fx/refresh": {
+      "post": {
+        "summary": "Trigger FX rate refresh (admin)",
+        "operationId": "refreshFxRate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshFxRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refresh outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/fx/rates/{id}/approve": {
+      "post": {
+        "summary": "Approve held rate (admin)",
+        "operationId": "approveRate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rate approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/fx/spread": {
+      "put": {
+        "summary": "Set FX spread in basis points (admin)",
+        "operationId": "setSpread",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSpreadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Spread updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "corridor": {
+                      "type": "string"
+                    },
+                    "spreadBps": {
+                      "type": "integer"
+                    },
+                    "setBy": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/remittances": {
+      "post": {
+        "summary": "Create remittance",
+        "operationId": "createRemittance",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRemittanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Remittance created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceView"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Replayed remittance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      },
+      "get": {
+        "summary": "List remittances for sender",
+        "operationId": "listRemittancesForSender",
+        "parameters": [
+          {
+            "name": "partnerCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "senderReference",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remittances list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RemittanceView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/remittances/{id}": {
+      "get": {
+        "summary": "Get remittance by id",
+        "operationId": "getRemittance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remittance found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceView"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/admin/remittances/{id}/history": {
+      "get": {
+        "summary": "Get remittance status history (admin)",
+        "operationId": "getRemittanceHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History statuses list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/remittances/{id}/review": {
+      "post": {
+        "summary": "Review remittance screening hold (admin)",
+        "operationId": "reviewRemittance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRemittanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/remittances/process": {
+      "post": {
+        "summary": "Trigger remittance processor pass (admin)",
+        "operationId": "processRemittances",
+        "responses": {
+          "200": {
+            "description": "Processor outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "handled": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/compliance/cases": {
+      "get": {
+        "summary": "List compliance cases (admin)",
+        "operationId": "listComplianceCases",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CaseStatus",
+              "default": "OPEN"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of compliance cases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CaseView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/compliance/cases/{id}": {
+      "get": {
+        "summary": "Get compliance case details (admin)",
+        "operationId": "getComplianceCase",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compliance case details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/compliance/cases/{id}/decision": {
+      "post": {
+        "summary": "Decide compliance case (admin)",
+        "operationId": "decideComplianceCase",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decision recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseView"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/compliance/customers/{customerId}/limits": {
+      "get": {
+        "summary": "Customer transaction limits status",
+        "operationId": "getCustomerLimits",
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Limit status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/partners/{partner}/position": {
+      "get": {
+        "summary": "Partner current position (admin)",
+        "operationId": "getPartnerPosition",
+        "parameters": [
+          {
+            "name": "partner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Position response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Position"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/partners/{partner}/close": {
+      "post": {
+        "summary": "Close settlement batch (admin)",
+        "operationId": "closeSettlementBatch",
+        "parameters": [
+          {
+            "name": "partner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cutoff",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchView"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Nothing new to batch"
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches": {
+      "get": {
+        "summary": "List settlement batches (admin)",
+        "operationId": "listSettlementBatches",
+        "parameters": [
+          {
+            "name": "partner",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batches list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}": {
+      "get": {
+        "summary": "Get batch by id (admin)",
+        "operationId": "getSettlementBatch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/lines": {
+      "get": {
+        "summary": "Get batch lines (admin)",
+        "operationId": "getBatchLines",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch lines list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchLineView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/report": {
+      "get": {
+        "summary": "Get batch report (admin)",
+        "operationId": "getBatchReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch report summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/instruct": {
+      "post": {
+        "summary": "Instruct batch payout (admin)",
+        "operationId": "instructBatch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch instructed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/confirm": {
+      "post": {
+        "summary": "Confirm batch payout (admin)",
+        "operationId": "confirmBatch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/dispute": {
+      "post": {
+        "summary": "Dispute batch (admin)",
+        "operationId": "disputeBatch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "note"
+                ],
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Batch disputed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/statement": {
+      "post": {
+        "summary": "Upload partner CSV statement (admin)",
+        "operationId": "uploadStatement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "text/csv": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Statement processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Duplicate statement already processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/batches/{id}/breaks": {
+      "get": {
+        "summary": "List breaks for batch (admin)",
+        "operationId": "listBatchBreaks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Breaks list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BreakView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/breaks/{id}/assign": {
+      "post": {
+        "summary": "Assign break to owner (admin)",
+        "operationId": "assignBreak",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "owner"
+                ],
+                "properties": {
+                  "owner": {
+                    "type": "string",
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Break assigned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreakView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settlement/breaks/{id}/resolve": {
+      "post": {
+        "summary": "Resolve break (admin)",
+        "operationId": "resolveBreak",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBreakRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Break resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreakView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/api-keys": {
+      "post": {
+        "summary": "Create API key (admin)",
+        "operationId": "createApiKey",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created (shows plaintext once)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedApiKeyResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List API keys (admin)",
+        "operationId": "listApiKeys",
+        "responses": {
+          "200": {
+            "description": "List of API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/api-keys/{id}": {
+      "delete": {
+        "summary": "Revoke API key (admin)",
+        "operationId": "revokeApiKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Key revoked"
+          }
+        }
+      }
+    },
+    "/api/admin/system/info": {
+      "get": {
+        "summary": "System configuration and feature flags (admin enabler Step 32)",
+        "operationId": "getSystemInfo",
+        "responses": {
+          "200": {
+            "description": "System information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/simulator/partner-funding": {
+      "post": {
+        "summary": "Simulate signed partner funding webhook (admin enabler Step 31)",
+        "operationId": "simulatePartnerFunding",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerFundingSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulation outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerFundingSimulationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ProblemResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/ProblemResponse"
+          }
+        }
+      }
+    },
+    "/api/admin/logs/recent": {
+      "get": {
+        "summary": "Recent server logs buffer (admin enabler Step 30)",
+        "operationId": "getRecentLogs",
+        "parameters": [
+          {
+            "name": "afterSequence",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent log lines",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogLine"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "responses": {
+      "ProblemResponse": {
+        "description": "RFC 7807 problem details",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ProblemDetail": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "invalidParams": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "UP"
+          },
+          "components": {
+            "type": "object"
+          }
+        }
+      },
+      "MetricsResponse": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "KycTier": {
+        "type": "string",
+        "enum": [
+          "UNVERIFIED",
+          "BASIC",
+          "FULL"
+        ]
+      },
+      "CustomerStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED"
+        ]
+      },
+      "CreateCustomerRequest": {
+        "type": "object",
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "phone"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^(\\+234|0)[789][01]\\d{8}$"
+          }
+        }
+      },
+      "UpdateKycTierRequest": {
+        "type": "object",
+        "required": [
+          "kycTier"
+        ],
+        "properties": {
+          "kycTier": {
+            "$ref": "#/components/schemas/KycTier"
+          }
+        }
+      },
+      "CustomerResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "kycTier",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "kycTier": {
+            "$ref": "#/components/schemas/KycTier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus"
+          }
+        }
+      },
+      "AccountStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "FROZEN",
+          "CLOSED"
+        ]
+      },
+      "OpenAccountRequest": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currency": {
+            "type": "string",
+            "default": "NGN"
+          }
+        }
+      },
+      "AccountResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "accountNumber",
+          "customerId",
+          "currency",
+          "balanceMinor",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "balanceMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus"
+          }
+        }
+      },
+      "StatementLineResponse": {
+        "type": "object",
+        "required": [
+          "entryId",
+          "type",
+          "reference",
+          "description",
+          "amountMinor",
+          "currency",
+          "createdAt"
+        ],
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FundAccountRequest": {
+        "type": "object",
+        "required": [
+          "amountMinor"
+        ],
+        "properties": {
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          }
+        }
+      },
+      "FundAccountResponse": {
+        "type": "object",
+        "required": [
+          "entryId",
+          "accountId",
+          "balanceMinor"
+        ],
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "balanceMinor": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TransferType": {
+        "type": "string",
+        "enum": [
+          "INTERNAL",
+          "EXTERNAL"
+        ]
+      },
+      "TransferStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "SUCCESSFUL",
+          "FAILED",
+          "REVERSED"
+        ]
+      },
+      "InternalTransferRequest": {
+        "type": "object",
+        "required": [
+          "sourceAccountId",
+          "destinationAccountNumber",
+          "amountMinor"
+        ],
+        "properties": {
+          "sourceAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationAccountNumber": {
+            "type": "string",
+            "pattern": "\\d{10}"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "narration": {
+            "type": "string",
+            "maxLength": 140
+          }
+        }
+      },
+      "TransferResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "reference",
+          "type",
+          "status",
+          "sourceAccountId",
+          "amountMinor",
+          "feeMinor",
+          "currency",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransferType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransferStatus"
+          },
+          "sourceAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "beneficiaryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "feeMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "narration": {
+            "type": "string",
+            "nullable": true
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ResolveBeneficiaryRequest": {
+        "type": "object",
+        "required": [
+          "bankCode",
+          "accountNumber"
+        ],
+        "properties": {
+          "bankCode": {
+            "type": "string",
+            "pattern": "\\d{3,6}"
+          },
+          "accountNumber": {
+            "type": "string",
+            "pattern": "\\d{10}"
+          }
+        }
+      },
+      "ResolvedAccount": {
+        "type": "object",
+        "required": [
+          "bankCode",
+          "accountNumber",
+          "accountName"
+        ],
+        "properties": {
+          "bankCode": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "accountName": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateBeneficiaryRequest": {
+        "type": "object",
+        "required": [
+          "customerId",
+          "bankCode",
+          "accountNumber"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bankCode": {
+            "type": "string",
+            "pattern": "\\d{3,6}"
+          },
+          "accountNumber": {
+            "type": "string",
+            "pattern": "\\d{10}"
+          }
+        }
+      },
+      "BeneficiaryView": {
+        "type": "object",
+        "required": [
+          "id",
+          "customerId",
+          "bankCode",
+          "accountNumber",
+          "accountName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bankCode": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "accountName": {
+            "type": "string"
+          }
+        }
+      },
+      "ExternalTransferRequest": {
+        "type": "object",
+        "required": [
+          "sourceAccountId",
+          "beneficiaryId",
+          "amountMinor"
+        ],
+        "properties": {
+          "sourceAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "beneficiaryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "narration": {
+            "type": "string",
+            "maxLength": 140
+          }
+        }
+      },
+      "NotificationView": {
+        "type": "object",
+        "required": [
+          "id",
+          "customerId",
+          "channel",
+          "recipient",
+          "eventType",
+          "reference",
+          "message",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Corridor": {
+        "type": "string",
+        "enum": [
+          "USD_NGN",
+          "GBP_NGN",
+          "EUR_NGN"
+        ]
+      },
+      "RateStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "HELD",
+          "SUPERSEDED"
+        ]
+      },
+      "CurrentRate": {
+        "type": "object",
+        "required": [
+          "corridor",
+          "customerRate",
+          "midRate",
+          "spreadBps",
+          "source",
+          "asOf"
+        ],
+        "properties": {
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "customerRate": {
+            "type": "string",
+            "example": "1540.250000"
+          },
+          "midRate": {
+            "type": "string",
+            "example": "1550.000000"
+          },
+          "spreadBps": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "QuoteStatus": {
+        "type": "string",
+        "enum": [
+          "OPEN",
+          "CONSUMED",
+          "CANCELLED",
+          "EXPIRED"
+        ]
+      },
+      "CreateQuoteRequest": {
+        "type": "object",
+        "required": [
+          "corridor",
+          "sellMinor"
+        ],
+        "properties": {
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "sellMinor": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "required": [
+          "id",
+          "reference",
+          "corridor",
+          "sellMinor",
+          "feeMinor",
+          "buyMinor",
+          "midRate",
+          "customerRate",
+          "spreadBps",
+          "rateSource",
+          "rateAsOf",
+          "expiresAt",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "sellMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "feeMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "buyMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "midRate": {
+            "type": "string"
+          },
+          "customerRate": {
+            "type": "string"
+          },
+          "spreadBps": {
+            "type": "integer"
+          },
+          "rateSource": {
+            "type": "string"
+          },
+          "rateAsOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuoteStatus"
+          },
+          "consumedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "Conversion": {
+        "type": "object",
+        "required": [
+          "id",
+          "quoteId",
+          "soldAmountMinor",
+          "soldCurrency",
+          "boughtAmountMinor",
+          "boughtCurrency",
+          "rate",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "soldAmountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "soldCurrency": {
+            "type": "string"
+          },
+          "boughtAmountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "boughtCurrency": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RateResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "corridor",
+          "midRate",
+          "source",
+          "retrievedAt",
+          "status",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "midRate": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RateStatus"
+          },
+          "approvesRateId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RefreshFxRequest": {
+        "type": "object",
+        "required": [
+          "corridor"
+        ],
+        "properties": {
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          }
+        }
+      },
+      "ManualRateRequest": {
+        "type": "object",
+        "required": [
+          "corridor",
+          "midRate"
+        ],
+        "properties": {
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "midRate": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200
+          }
+        }
+      },
+      "SetSpreadRequest": {
+        "type": "object",
+        "required": [
+          "corridor",
+          "spreadBps"
+        ],
+        "properties": {
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "spreadBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000
+          }
+        }
+      },
+      "RecipientType": {
+        "type": "string",
+        "enum": [
+          "PAYBRIDGE",
+          "BANK"
+        ]
+      },
+      "RemittanceStatus": {
+        "type": "string",
+        "enum": [
+          "CREATED",
+          "SCREENING",
+          "UNDER_REVIEW",
+          "AWAITING_FUNDING",
+          "FUNDED",
+          "CONVERTED",
+          "PAYOUT_PENDING",
+          "PAID",
+          "FAILED",
+          "REFUND_PENDING",
+          "REFUNDED",
+          "CANCELLED"
+        ]
+      },
+      "CreateRemittanceRequest": {
+        "type": "object",
+        "required": [
+          "partnerCode",
+          "partnerReference",
+          "quoteId",
+          "sender",
+          "recipient"
+        ],
+        "properties": {
+          "partnerCode": {
+            "type": "string",
+            "maxLength": 16
+          },
+          "partnerReference": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sender": {
+            "type": "object",
+            "required": [
+              "reference",
+              "fullName"
+            ],
+            "properties": {
+              "reference": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "fullName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "country": {
+                "type": "string",
+                "pattern": "[A-Za-z]{2}"
+              },
+              "dateOfBirth": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          },
+          "recipient": {
+            "type": "object",
+            "required": [
+              "type",
+              "fullName",
+              "accountNumber"
+            ],
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/RecipientType"
+              },
+              "fullName": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "country": {
+                "type": "string",
+                "pattern": "[A-Za-z]{2}"
+              },
+              "bankCode": {
+                "type": "string",
+                "pattern": "\\d{3,6}"
+              },
+              "accountNumber": {
+                "type": "string",
+                "pattern": "\\d{10}"
+              }
+            }
+          }
+        }
+      },
+      "RemittanceView": {
+        "type": "object",
+        "required": [
+          "id",
+          "reference",
+          "status",
+          "corridor",
+          "sellMinor",
+          "feeMinor",
+          "buyMinor",
+          "quoteId",
+          "partnerCode",
+          "partnerReference",
+          "senderName",
+          "recipientName",
+          "recipientType",
+          "recipientAccountMasked",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RemittanceStatus"
+          },
+          "statusReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "corridor": {
+            "$ref": "#/components/schemas/Corridor"
+          },
+          "sellMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "feeMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "buyMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partnerCode": {
+            "type": "string"
+          },
+          "partnerReference": {
+            "type": "string"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientType": {
+            "$ref": "#/components/schemas/RecipientType"
+          },
+          "recipientAccountMasked": {
+            "type": "string"
+          },
+          "fundingExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ReviewRemittanceRequest": {
+        "type": "object",
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REJECT"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "CaseStatus": {
+        "type": "string",
+        "enum": [
+          "OPEN",
+          "APPROVED",
+          "REJECTED"
+        ]
+      },
+      "CaseView": {
+        "type": "object",
+        "required": [
+          "id",
+          "reference",
+          "partyName",
+          "outcome",
+          "matchDetails",
+          "status",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "partyName": {
+            "type": "string"
+          },
+          "partyCountry": {
+            "type": "string",
+            "nullable": true
+          },
+          "partyBirth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "matchDetails": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatus"
+          },
+          "decidedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "decisionReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CaseDecisionRequest": {
+        "type": "object",
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REJECT"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "LimitStatus": {
+        "type": "object",
+        "required": [
+          "customerId",
+          "tier",
+          "dailyLimitMinor",
+          "spentTodayMinor",
+          "remainingMinor",
+          "currency"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/KycTier"
+          },
+          "dailyLimitMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "spentTodayMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remainingMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          }
+        }
+      },
+      "Position": {
+        "type": "object",
+        "required": [
+          "partner",
+          "currency",
+          "unsettledAmountMinor",
+          "asOf"
+        ],
+        "properties": {
+          "partner": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unsettledAmountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BatchStatus": {
+        "type": "string",
+        "enum": [
+          "CLOSED",
+          "INSTRUCTED",
+          "CONFIRMED",
+          "DISPUTED",
+          "RECONCILED"
+        ]
+      },
+      "BatchView": {
+        "type": "object",
+        "required": [
+          "id",
+          "batchNumber",
+          "partner",
+          "currency",
+          "totalAmountMinor",
+          "lineCount",
+          "status",
+          "closedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batchNumber": {
+            "type": "string"
+          },
+          "partner": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "totalAmountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lineCount": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BatchStatus"
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "instructedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "disputedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "disputeNote": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BatchLineView": {
+        "type": "object",
+        "required": [
+          "id",
+          "batchId",
+          "reference",
+          "amountMinor",
+          "currency",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BatchReport": {
+        "type": "object",
+        "required": [
+          "batchId",
+          "batchNumber",
+          "partner",
+          "currency",
+          "totalAmountMinor",
+          "lineCount",
+          "status"
+        ],
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batchNumber": {
+            "type": "string"
+          },
+          "partner": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "totalAmountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lineCount": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BatchStatus"
+          }
+        }
+      },
+      "StatementResult": {
+        "type": "object",
+        "required": [
+          "batchId",
+          "matchedCount",
+          "breakCount",
+          "duplicate"
+        ],
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matchedCount": {
+            "type": "integer"
+          },
+          "breakCount": {
+            "type": "integer"
+          },
+          "duplicate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BreakView": {
+        "type": "object",
+        "required": [
+          "id",
+          "batchId",
+          "reference",
+          "kind",
+          "expectedMinor",
+          "actualMinor",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "expectedMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "actualMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "assignedTo": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolutionNote": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ResolveBreakRequest": {
+        "type": "object",
+        "required": [
+          "note",
+          "adjust"
+        ],
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "adjust": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiKeyRole": {
+        "type": "string",
+        "enum": [
+          "CLIENT",
+          "ADMIN"
+        ]
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "role"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "role": {
+            "$ref": "#/components/schemas/ApiKeyRole"
+          }
+        }
+      },
+      "CreatedApiKeyResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "plaintext",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ApiKeyRole"
+          },
+          "plaintext": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ApiKeyRole"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "SystemInfoResponse": {
+        "type": "object",
+        "required": [
+          "gatewayMode",
+          "activeProfile",
+          "version",
+          "devFundingEnabled",
+          "simulatorEnabled",
+          "logStreamEnabled",
+          "partnerSecretConfigured",
+          "serverTime"
+        ],
+        "properties": {
+          "gatewayMode": {
+            "type": "string",
+            "example": "fake"
+          },
+          "activeProfile": {
+            "type": "string",
+            "example": "prod"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "devFundingEnabled": {
+            "type": "boolean"
+          },
+          "simulatorEnabled": {
+            "type": "boolean"
+          },
+          "logStreamEnabled": {
+            "type": "boolean"
+          },
+          "partnerSecretConfigured": {
+            "type": "boolean"
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PartnerFundingSimulationRequest": {
+        "type": "object",
+        "required": [
+          "remittanceReference",
+          "amountMinor",
+          "mode"
+        ],
+        "properties": {
+          "remittanceReference": {
+            "type": "string"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "valid",
+              "forged",
+              "repeat",
+              "wrong-amount"
+            ]
+          },
+          "eventId": {
+            "type": "string"
+          }
+        }
+      },
+      "PartnerFundingSimulationResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "mode",
+          "eventId"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "LogLine": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "timestamp",
+          "level",
+          "logger",
+          "message"
+        ],
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR"
+            ]
+          },
+          "logger": {
+            "type": "string"
+          },
+          "thread": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
