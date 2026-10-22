@@ -30,7 +30,7 @@ interface SessionState {
   clearRecentEntities: () => void;
 }
 
-const DEFAULT_BACKEND_URL = (import.meta.env.VITE_DEFAULT_BACKEND_URL as string) || 'https://paybridge.onrender.com';
+const DEFAULT_BACKEND_URL = (import.meta.env.VITE_DEFAULT_BACKEND_URL as string) || 'https://paybridge-xsf2.onrender.com';
 const STORAGE_KEY_BACKEND_URL = 'paybridge_backend_url';
 const STORAGE_KEY_RECENT_URLS = 'paybridge_recent_backend_urls';
 const STORAGE_KEY_AUTO_WAKE = 'paybridge_auto_wake';
