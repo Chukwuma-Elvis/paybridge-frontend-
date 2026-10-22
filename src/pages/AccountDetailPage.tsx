@@ -72,7 +72,13 @@ export const AccountDetailPage: React.FC = () => {
       toast.success('Funded ₦100,000.00 test money!');
       loadData();
     } catch (err: any) {
-      toast.error(err.message);
+      if (err.status === 404 || err.message?.includes('No static resource')) {
+        toast.error('Dev Funding is deploying or disabled on Render. Please verify PAYBRIDGE_DEV_FUNDING_ENABLED=true in Render Dashboard.');
+      } else if (err.status === 401 || err.status === 403) {
+        toast.error('Dev funding requires an ADMIN API key. Please check your API key in Settings.');
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setIsFunding(false);
     }
