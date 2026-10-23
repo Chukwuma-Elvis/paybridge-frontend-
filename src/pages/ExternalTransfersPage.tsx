@@ -35,11 +35,21 @@ export const ExternalTransfersPage: React.FC = () => {
 
   const bankOptions = [
     { label: '044 - Access Bank', value: '044' },
-    { label: '058 - GTBank', value: '058' },
+    { label: '058 - GTBank (Guaranty Trust)', value: '058' },
     { label: '011 - First Bank of Nigeria', value: '011' },
     { label: '033 - United Bank for Africa (UBA)', value: '033' },
     { label: '057 - Zenith Bank', value: '057' },
+    { label: '035 - Wema Bank / ALAT', value: '035' },
+    { label: '214 - First City Monument Bank (FCMB)', value: '214' },
+    { label: '070 - Fidelity Bank', value: '070' },
+    { label: '221 - Stanbic IBTC Bank', value: '221' },
+    { label: '032 - Union Bank of Nigeria', value: '032' },
     { label: '232 - Sterling Bank', value: '232' },
+    { label: '101 - Providus Bank', value: '101' },
+    { label: '50211 - Kuda Bank', value: '50211' },
+    { label: '999992 - OPay (Paycom)', value: '999992' },
+    { label: '999991 - PalmPay', value: '999991' },
+    { label: '50515 - Moniepoint MFB', value: '50515' },
   ];
 
   // Resolve Name Enquiry
