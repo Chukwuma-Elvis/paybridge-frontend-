@@ -335,23 +335,15 @@ export const SettlementPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              Settlement endpoints require an <strong>ADMIN</strong> API key. Your active key has <strong>CLIENT</strong> privileges.
+              Your active key was generated with <strong>CLIENT</strong> scope. Settlement endpoints require a key generated with <strong>ADMIN</strong> scope.
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => {
-                session.setKeyRole('ADMIN');
-                toast.success('Active key role switched to ADMIN.');
-              }}
-              className="text-xs"
-            >
-              Switch to ADMIN Privileges
-            </Button>
             <Button size="sm" variant="outline" onClick={() => navigate('/admin/keys')} className="text-xs">
-              Manage Keys
+              Generate Admin Key
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => navigate('/connect')} className="text-xs text-slate-500">
+              Paste Admin Key
             </Button>
           </div>
         </div>

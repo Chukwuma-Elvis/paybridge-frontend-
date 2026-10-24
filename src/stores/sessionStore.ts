@@ -47,8 +47,44 @@ const STORAGE_KEY_RECENT_URLS = 'paybridge_recent_backend_urls';
 const STORAGE_KEY_AUTO_WAKE = 'paybridge_auto_wake';
 const SESSION_KEY_API_KEY = 'paybridge_session_api_key';
 const SESSION_KEY_ROLE = 'paybridge_session_role';
+const STORAGE_KEY_KNOWN_KEY_ROLES = 'paybridge_known_key_roles';
 const STORAGE_KEY_RECENT_ENTITIES = 'paybridge_recent_entities';
 const STORAGE_KEY_SELECTED_ACCOUNT = 'paybridge_selected_account';
+
+export function getKnownKeyRole(key: string): KeyRole | null {
+  try {
+    const trimmed = key.trim();
+    if (!trimmed) return null;
+    const stored = localStorage.getItem(STORAGE_KEY_KNOWN_KEY_ROLES);
+    if (stored) {
+      const map: Record<string, KeyRole> = JSON.parse(stored);
+      if (map[trimmed]) return map[trimmed];
+      const prefix = trimmed.slice(0, 11);
+      if (map[prefix]) return map[prefix];
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+export function registerKnownKeyRole(key: string, role: KeyRole, prefix?: string) {
+  try {
+    const trimmed = key.trim();
+    if (!trimmed) return;
+    const stored = localStorage.getItem(STORAGE_KEY_KNOWN_KEY_ROLES);
+    const map: Record<string, KeyRole> = stored ? JSON.parse(stored) : {};
+    map[trimmed] = role;
+    if (prefix) {
+      map[prefix] = role;
+    }
+    const derivedPrefix = trimmed.slice(0, 11);
+    map[derivedPrefix] = role;
+    localStorage.setItem(STORAGE_KEY_KNOWN_KEY_ROLES, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
 
 function loadInitialSelectedAccount(): SelectedAccount | null {
   try {
@@ -104,7 +140,8 @@ function loadInitialApiKey(): { key: string; role: KeyRole } {
     const savedKey = sessionStorage.getItem(SESSION_KEY_API_KEY);
     const savedRole = sessionStorage.getItem(SESSION_KEY_ROLE) as KeyRole | null;
     if (savedKey) {
-      return { key: savedKey, role: savedRole || 'ADMIN' };
+      const knownRole = getKnownKeyRole(savedKey);
+      return { key: savedKey, role: knownRole || savedRole || 'ADMIN' };
     }
   } catch {
     // ignore
@@ -176,22 +213,32 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
     setApiKey: (key: string, role?: KeyRole) => {
       const trimmed = key.trim();
-      let detectedRole: KeyRole = role || (trimmed ? (get().keyRole !== 'ANONYMOUS' ? get().keyRole : 'ADMIN') : 'ANONYMOUS');
+      if (!trimmed) {
+        get().clearKey();
+        return;
+      }
+
+      // Role is determined by the role scope picked when generating the key:
+      // 1. Explicit role passed (e.g. key generation form on ApiKeysPage)
+      // 2. Known generated keys registry (stored when key was generated)
+      // 3. Fallback heuristic or existing session role
+      let determinedRole: KeyRole =
+        role ||
+        getKnownKeyRole(trimmed) ||
+        (trimmed.toLowerCase().includes('admin') || trimmed.startsWith('adm-')
+          ? 'ADMIN'
+          : get().keyRole !== 'ANONYMOUS'
+          ? get().keyRole
+          : 'ADMIN');
+
       if (role) {
-        detectedRole = role;
-      } else if (trimmed.toLowerCase().includes('admin') || trimmed.startsWith('adm-')) {
-        detectedRole = 'ADMIN';
+        registerKnownKeyRole(trimmed, role);
       }
 
       if (get().rememberKeyInSession) {
         try {
-          if (trimmed) {
-            sessionStorage.setItem(SESSION_KEY_API_KEY, trimmed);
-            sessionStorage.setItem(SESSION_KEY_ROLE, detectedRole);
-          } else {
-            sessionStorage.removeItem(SESSION_KEY_API_KEY);
-            sessionStorage.removeItem(SESSION_KEY_ROLE);
-          }
+          sessionStorage.setItem(SESSION_KEY_API_KEY, trimmed);
+          sessionStorage.setItem(SESSION_KEY_ROLE, determinedRole);
         } catch {
           // ignore
         }
@@ -199,13 +246,11 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
       set({
         apiKey: trimmed,
-        keyRole: trimmed ? detectedRole : 'ANONYMOUS',
+        keyRole: determinedRole,
       });
 
-      // Background probe: if key was provided and no explicit role was passed, verify against server
-      if (trimmed && !role) {
-        get().verifyKeyRole(trimmed).catch(() => {});
-      }
+      // Background probe: verify against server and register confirmed role
+      get().verifyKeyRole(trimmed).catch(() => {});
     },
 
     setKeyRole: (role: KeyRole) => {
@@ -237,9 +282,11 @@ export const useSessionStore = create<SessionState>((set, get) => {
         });
 
         if (res.ok) {
+          registerKnownKeyRole(activeKey, 'ADMIN');
           get().setKeyRole('ADMIN');
           return 'ADMIN';
         } else if (res.status === 403) {
+          registerKnownKeyRole(activeKey, 'CLIENT');
           get().setKeyRole('CLIENT');
           return 'CLIENT';
         }

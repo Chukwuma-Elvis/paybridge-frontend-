@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSessionStore } from '../stores/sessionStore';
+import { useNavigate } from 'react-router-dom';
+import { useSessionStore, registerKnownKeyRole } from '../stores/sessionStore';
 import { apiRequest } from '../services/apiClient';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -11,6 +12,7 @@ import { KeyRound, Plus, Copy, Check, Trash2, RefreshCw, AlertTriangle, ShieldCh
 import { toast } from 'sonner';
 
 export const ApiKeysPage: React.FC = () => {
+  const navigate = useNavigate();
   const session = useSessionStore();
 
   const [keys, setKeys] = useState<any[]>([]);
@@ -33,12 +35,19 @@ export const ApiKeysPage: React.FC = () => {
         path: '/api/admin/api-keys',
         label: 'List API keys',
       });
-      setKeys(res.data || []);
+      const keyList = res.data || [];
+      setKeys(keyList);
+      // Register all known key prefixes with their generated role scope
+      keyList.forEach((k: any) => {
+        if (k.prefix && k.role) {
+          registerKnownKeyRole(k.prefix, k.role);
+        }
+      });
     } catch {
       // Demo mock keys
       setKeys([
-        { id: '1', name: 'default-admin-key', role: 'ADMIN', createdAt: new Date().toISOString() },
-        { id: '2', name: 'mobile-app-client', role: 'CLIENT', createdAt: new Date().toISOString() },
+        { id: '1', name: 'default-admin-key', role: 'ADMIN', prefix: 'adm-demo', createdAt: new Date().toISOString() },
+        { id: '2', name: 'mobile-app-client', role: 'CLIENT', prefix: 'cli-demo', createdAt: new Date().toISOString() },
       ]);
     } finally {
       setIsLoading(false);
@@ -67,11 +76,14 @@ export const ApiKeysPage: React.FC = () => {
 
       const newKey = res.data;
       const keyString = newKey.apiKey || newKey.plaintext || '';
+      const createdRole = (newKey.role || role) as 'CLIENT' | 'ADMIN';
       setRevealedKey(keyString);
-      setRevealedKeyRole(role);
+      setRevealedKeyRole(createdRole);
+      // Record in known registry so console always associates this key with the scope picked at generation
+      registerKnownKeyRole(keyString, createdRole, newKey.prefix);
       setKeys((prev) => [newKey, ...prev]);
       setKeyName('');
-      toast.success('API key generated! Copy it now; it cannot be shown again.');
+      toast.success(`API key generated with ${createdRole} role scope! Copy it now; it cannot be shown again.`);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -157,20 +169,16 @@ export const ApiKeysPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              Your active key is currently operating in <strong>CLIENT</strong> mode. API Key management endpoints require <strong>ADMIN</strong> privileges.
+              Your active key was generated with <strong>CLIENT</strong> scope. Key management endpoints require a key generated with <strong>ADMIN</strong> scope.
             </span>
           </div>
           <Button
             size="sm"
-            variant="primary"
-            onClick={() => {
-              session.setKeyRole('ADMIN');
-              toast.success('Active key role switched to ADMIN.');
-              loadKeys();
-            }}
+            variant="outline"
+            onClick={() => navigate('/connect')}
             className="shrink-0 text-xs"
           >
-            Switch Active Key to ADMIN
+            Switch to Admin Key in Connect
           </Button>
         </div>
       )}
