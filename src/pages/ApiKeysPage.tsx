@@ -64,7 +64,8 @@ export const ApiKeysPage: React.FC = () => {
       });
 
       const newKey = res.data;
-      setRevealedKey(newKey.plaintext);
+      const keyString = newKey.apiKey || newKey.plaintext || '';
+      setRevealedKey(keyString);
       setKeys((prev) => [newKey, ...prev]);
       setKeyName('');
       toast.success('API key generated! Copy it now; it cannot be shown again.');
@@ -98,6 +99,13 @@ export const ApiKeysPage: React.FC = () => {
     }
   };
 
+  const handleUseKeyInSession = () => {
+    if (revealedKey) {
+      session.setApiKey(revealedKey);
+      toast.success('Active console API key updated to this new key!');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -113,26 +121,36 @@ export const ApiKeysPage: React.FC = () => {
 
       {/* One-Time Plaintext Reveal Notice */}
       {revealedKey && (
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-lg space-y-2">
-          <div className="flex items-center justify-between">
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-lg space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-950 dark:text-emerald-100">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>New API Key Plaintext (Shown Once)</span>
+              <span>New API Key Generated (Plaintext - Copy Now)</span>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCopyPlaintext}
-              icon={copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            >
-              {copied ? 'Copied' : 'Copy Key'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleUseKeyInSession}
+                icon={<KeyRound className="w-3.5 h-3.5 text-blue-600" />}
+              >
+                Use in Console
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCopyPlaintext}
+                icon={copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              >
+                {copied ? 'Copied' : 'Copy Key'}
+              </Button>
+            </div>
           </div>
-          <div className="p-2.5 bg-white dark:bg-slate-900 rounded border border-emerald-200 dark:border-emerald-800 font-mono text-xs font-bold text-blue-600 dark:text-blue-400 select-all break-all">
+          <div className="p-3 bg-white dark:bg-slate-900 rounded border border-emerald-200 dark:border-emerald-800 font-mono text-xs font-bold text-blue-600 dark:text-blue-400 select-all break-all shadow-sm">
             {revealedKey}
           </div>
           <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
-            Store this key securely. If lost, it must be revoked and reissued.
+            Copy this key now. It is hashed on the server with SHA-256 and will <strong>never</strong> be displayed again. If lost, it must be revoked and reissued.
           </p>
         </div>
       )}
@@ -181,7 +199,9 @@ export const ApiKeysPage: React.FC = () => {
                 <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Prefix</th>
                     <th className="px-3 py-2 font-medium">Scope</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
                     <th className="px-3 py-2 font-medium">Created</th>
                     <th className="px-3 py-2 font-medium text-right">Revoke</th>
                   </tr>
@@ -192,24 +212,34 @@ export const ApiKeysPage: React.FC = () => {
                       <td className="px-3 py-2 font-semibold text-slate-900 dark:text-slate-100 font-sans">
                         {k.name}
                       </td>
+                      <td className="px-3 py-2 text-slate-500 text-xs">
+                        {k.prefix || '(operator)'}
+                      </td>
                       <td className="px-3 py-2">
                         <Badge variant={k.role === 'ADMIN' ? 'accent' : 'neutral'} size="sm">
                           {k.role}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant={k.active !== false ? 'success' : 'danger'} size="sm">
+                          {k.active !== false ? 'ACTIVE' : 'REVOKED'}
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-slate-500 text-[11px]">
                         {new Date(k.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRevokeKey(k.id)}
-                          icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
-                          title="Revoke key immediately"
-                        >
-                          Revoke
-                        </Button>
+                        {k.active !== false && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRevokeKey(k.id)}
+                            icon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+                            title="Revoke key immediately"
+                          >
+                            Revoke
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
