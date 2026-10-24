@@ -123,7 +123,12 @@ export const ApiKeysPage: React.FC = () => {
       session.clearRecentEntities();
       setRevealedKey(null);
       await loadKeys();
-      toast.success(res.data?.message || 'Database successfully reset: customer accounts and custom keys purged.');
+      const details = res.data;
+      if (details?.deletedAccounts !== undefined) {
+        toast.success(`Database purged! Removed ${details.deletedCustomers} customers, ${details.deletedAccounts} accounts, and ${details.deletedApiKeys} custom keys.`);
+      } else {
+        toast.success(details?.message || 'Database successfully reset: customer accounts and custom keys purged.');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to purge database. Ensure you are using an ADMIN key.');
     } finally {
