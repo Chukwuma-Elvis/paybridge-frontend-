@@ -163,18 +163,14 @@ export const RemittancesPage: React.FC = () => {
       setSimResult(res.data);
       toast.success(`Partner simulator executed in mode: ${simMode}`);
 
-      // Refresh remittance status
-      refreshRemittance(selectedRemittance.id);
+      // Refresh remittance status from backend
+      await refreshRemittance(selectedRemittance.id);
     } catch (err: any) {
-      // In case Step 31 backend endpoint is simulated locally
-      if (simMode === 'forged') {
+      if (simMode === 'forged' && (err.status === 401 || err.code === 'UNAUTHORIZED' || err.message?.includes('signature') || err.message?.includes('401'))) {
         setSimResult({ status: 'REJECTED_401', mode: 'forged', message: 'Signature verification failed (HMAC invalid)' });
         toast.error('Forged signature rejected with 401 Unauthorized as expected!');
       } else {
-        const nextStatus = simMode === 'valid' ? 'PAID' : selectedRemittance.status;
-        setSelectedRemittance((prev: any) => ({ ...prev, status: nextStatus }));
-        setSimResult({ status: 'ACKNOWLEDGED', mode: simMode, message: 'Funding webhook processed successfully.' });
-        toast.success(`Simulator executed: remittance is now ${nextStatus}`);
+        toast.error(err.message || 'Simulation failed');
       }
     } finally {
       setIsSimulating(false);
