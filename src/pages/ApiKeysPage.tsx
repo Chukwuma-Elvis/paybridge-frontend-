@@ -18,6 +18,7 @@ export const ApiKeysPage: React.FC = () => {
   const [role, setRole] = useState<'CLIENT' | 'ADMIN'>('CLIENT');
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // One-time plaintext reveal modal/banner
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
@@ -103,6 +104,30 @@ export const ApiKeysPage: React.FC = () => {
     if (revealedKey) {
       session.setApiKey(revealedKey);
       toast.success('Active console API key updated to this new key!');
+    }
+  };
+
+  const handleResetDatabase = async () => {
+    const confirmed = window.confirm(
+      'WARNING: This will permanently delete ALL customer accounts, transfers, ledger lines, beneficiaries, and all custom API keys from the PostgreSQL database.\n\nOnly the bootstrap admin key (PAYBRIDGE_ADMIN_API_KEY) and zeroed system balance accounts will be retained.\n\nAre you sure you want to proceed?'
+    );
+    if (!confirmed) return;
+
+    setIsResetting(true);
+    try {
+      const res = await apiRequest({
+        method: 'POST',
+        path: '/api/dev/reset',
+        label: 'Purge & Reset Sandbox Database',
+      });
+      session.clearRecentEntities();
+      setRevealedKey(null);
+      await loadKeys();
+      toast.success(res.data?.message || 'Database successfully reset: customer accounts and custom keys purged.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to purge database. Ensure you are using an ADMIN key.');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -249,6 +274,47 @@ export const ApiKeysPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Sandbox Database Purge & Reset */}
+      <Card
+        title={
+          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Danger Zone: Sandbox Database Purge & Reset</span>
+          </div>
+        }
+        subtitle="Purge all customer accounts, ledger transactions, customers, and custom API keys"
+        className="border-rose-200 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10"
+        actions={
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleResetDatabase}
+            isLoading={isResetting}
+            icon={<AlertTriangle className="w-3.5 h-3.5" />}
+          >
+            Purge Accounts & Custom Keys
+          </Button>
+        }
+      >
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-2">
+          <p>
+            Executes a full sandbox database reset on Render. It cascades through and deletes all customer accounts, transfers,
+            journal entries, settlement batches, beneficiaries, customers, and all custom API keys.
+          </p>
+          <div className="flex flex-wrap gap-4 text-[11px] font-mono text-slate-500 dark:text-slate-400 pt-1">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Preserved: <strong>bootstrap-admin (operator) key</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Preserved: <strong>System accounts (balances reset to 0)</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span> Purged: <strong>All customer records & custom keys</strong>
+            </span>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 };
