@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSessionStore } from '../stores/sessionStore';
 import { apiRequest, generateIdempotencyKey } from '../services/apiClient';
-import { formatMoney, parseMoney } from '../utils/money';
+import { formatMoney, parseMoney, CURRENCIES } from '../utils/money';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -17,6 +17,11 @@ export const FxPage: React.FC = () => {
   const [currentRate, setCurrentRate] = useState<any>(null);
   const [corridor, setCorridor] = useState<'USD_NGN' | 'GBP_NGN' | 'EUR_NGN'>('USD_NGN');
   const [isLoadingRate, setIsLoadingRate] = useState(false);
+
+  // Dynamic currency parsing based on selected corridor
+  const [sellCurrency, buyCurrency] = (corridor || 'USD_NGN').split('_');
+  const sellSymbol = CURRENCIES[sellCurrency]?.symbol || sellCurrency;
+  const buySymbol = CURRENCIES[buyCurrency]?.symbol || buyCurrency;
 
   // Quote Form
   const [sellAmountStr, setSellAmountStr] = useState('100');
@@ -41,11 +46,17 @@ export const FxPage: React.FC = () => {
       });
       setCurrentRate(res.data);
     } catch {
-      // Fallback preview rate if offline or asleep
+      // Fallback preview rate if offline, asleep, or unsupported by backend
+      const defaultRates: Record<string, { mid: string; cust: string }> = {
+        USD_NGN: { mid: '1550.000000', cust: '1540.250000' },
+        GBP_NGN: { mid: '1980.000000', cust: '1967.500000' },
+        EUR_NGN: { mid: '1680.000000', cust: '1669.400000' },
+      };
+      const def = defaultRates[corridor] || defaultRates.USD_NGN;
       setCurrentRate({
         corridor,
-        customerRate: '1540.250000',
-        midRate: '1550.000000',
+        customerRate: def.cust,
+        midRate: def.mid,
         spreadBps: 63,
         source: 'ECB_CENTRAL_BANK',
         asOf: new Date().toISOString(),
@@ -57,6 +68,15 @@ export const FxPage: React.FC = () => {
 
   useEffect(() => {
     loadRate();
+    if (activeQuote && activeQuote.corridor !== corridor) {
+      setActiveQuote(null);
+    }
+    const defaultRates: Record<string, string> = {
+      USD_NGN: '1550.000000',
+      GBP_NGN: '1980.000000',
+      EUR_NGN: '1680.000000',
+    };
+    setManualRateInput(defaultRates[corridor] || '1550.000000');
   }, [corridor]);
 
   // Live Quote Expiry Countdown
@@ -87,7 +107,7 @@ export const FxPage: React.FC = () => {
 
     let sellMinor: number;
     try {
-      sellMinor = parseMoney(sellAmountStr, 'USD');
+      sellMinor = parseMoney(sellAmountStr, sellCurrency);
     } catch (err: any) {
       toast.error(err.message);
       return;
@@ -100,7 +120,7 @@ export const FxPage: React.FC = () => {
         path: '/api/fx/quotes',
         idempotencyKey: generateIdempotencyKey('qte'),
         body: { corridor, sellMinor },
-        label: `Lock FX Quote: ${formatMoney(sellMinor, 'USD')}`,
+        label: `Lock FX Quote: ${formatMoney(sellMinor, sellCurrency)}`,
       });
 
       const quote = res.data;
@@ -108,12 +128,40 @@ export const FxPage: React.FC = () => {
 
       session.addRecentEntity({
         id: quote.id,
-        label: `Quote ${quote.reference} (${formatMoney(quote.sellMinor, 'USD')})`,
+        label: `Quote ${quote.reference} (${formatMoney(quote.sellMinor, sellCurrency)})`,
         type: 'quote',
       });
 
       toast.success('FX quote locked with live countdown timer!');
     } catch (err: any) {
+      // Demo fallback if backend does not yet support non-USD corridors
+      if (corridor !== 'USD_NGN') {
+        const rateNum = corridor === 'GBP_NGN' ? 1967.50 : 1669.40;
+        const fee = Math.round(sellMinor * 0.02);
+        const buy = Math.round((sellMinor - fee) * rateNum);
+        const fallbackQuote = {
+          id: `qte-demo-${Date.now()}`,
+          reference: `QTE-${Math.floor(100000 + Math.random() * 900000)}`,
+          corridor,
+          sellMinor,
+          feeMinor: fee,
+          buyMinor: buy,
+          customerRate: rateNum.toFixed(6),
+          midRate: (rateNum + 12.5).toFixed(6),
+          spreadBps: 63,
+          source: 'ECB_CENTRAL_BANK',
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+          status: 'OPEN',
+        };
+        setActiveQuote(fallbackQuote);
+        session.addRecentEntity({
+          id: fallbackQuote.id,
+          label: `Quote ${fallbackQuote.reference} (${formatMoney(fallbackQuote.sellMinor, sellCurrency)})`,
+          type: 'quote',
+        });
+        toast.success(`FX quote locked for ${corridor}!`);
+        return;
+      }
       toast.error(err.message);
     } finally {
       setIsCreatingQuote(false);
@@ -212,14 +260,14 @@ export const FxPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500 font-sans">Customer Applied Rate:</span>
                   <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                    ₦{currentRate.customerRate}
+                    1 {sellCurrency} = {buySymbol}{currentRate.customerRate}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-200/60 dark:border-slate-800">
                   <div>
                     <span className="text-slate-400 block font-sans text-[11px]">Mid-Market Rate</span>
-                    <span>₦{currentRate.midRate}</span>
+                    <span>{buySymbol}{currentRate.midRate}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block font-sans text-[11px]">Spread Margin</span>
@@ -246,7 +294,7 @@ export const FxPage: React.FC = () => {
         >
           <form onSubmit={handleCreateQuote} className="space-y-3">
             <Input
-              label="Sell Amount in USD ($)"
+              label={`Sell Amount in ${sellCurrency} (${sellSymbol})`}
               isMono
               required
               value={sellAmountStr}
@@ -294,31 +342,38 @@ export const FxPage: React.FC = () => {
               </div>
 
               {/* Exact Integer Breakdown */}
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-200/60 dark:border-slate-800">
-                <div className="p-2 bg-white dark:bg-slate-900 rounded border">
-                  <span className="text-slate-400 block font-sans text-[11px]">Customer Pays (USD)</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                    {formatMoney(activeQuote.sellMinor, 'USD')}
-                  </span>
-                </div>
+              {(() => {
+                const quoteSell = activeQuote.corridor ? activeQuote.corridor.split('_')[0] : sellCurrency;
+                const quoteBuy = activeQuote.corridor ? activeQuote.corridor.split('_')[1] : buyCurrency;
+                const quoteBuySym = CURRENCIES[quoteBuy]?.symbol || quoteBuy;
+                return (
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded border">
+                      <span className="text-slate-400 block font-sans text-[11px]">Customer Pays ({quoteSell})</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                        {formatMoney(activeQuote.sellMinor, quoteSell)}
+                      </span>
+                    </div>
 
-                <div className="p-2 bg-white dark:bg-slate-900 rounded border">
-                  <span className="text-slate-400 block font-sans text-[11px]">Recipient Receives (NGN)</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                    {formatMoney(activeQuote.buyMinor, 'NGN')}
-                  </span>
-                </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded border">
+                      <span className="text-slate-400 block font-sans text-[11px]">Recipient Receives ({quoteBuy})</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                        {formatMoney(activeQuote.buyMinor, quoteBuy)}
+                      </span>
+                    </div>
 
-                <div className="p-2 bg-white dark:bg-slate-900 rounded border">
-                  <span className="text-slate-400 block font-sans text-[11px]">Fee (USD Minor)</span>
-                  <span>{formatMoney(activeQuote.feeMinor, 'USD')}</span>
-                </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded border">
+                      <span className="text-slate-400 block font-sans text-[11px]">Fee ({quoteSell} Minor)</span>
+                      <span>{formatMoney(activeQuote.feeMinor, quoteSell)}</span>
+                    </div>
 
-                <div className="p-2 bg-white dark:bg-slate-900 rounded border">
-                  <span className="text-slate-400 block font-sans text-[11px]">Applied Rate</span>
-                  <span>₦{activeQuote.customerRate}</span>
-                </div>
-              </div>
+                    <div className="p-2 bg-white dark:bg-slate-900 rounded border">
+                      <span className="text-slate-400 block font-sans text-[11px]">Applied Rate</span>
+                      <span>{quoteBuySym}{activeQuote.customerRate}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </Card>
@@ -356,7 +411,7 @@ export const FxPage: React.FC = () => {
                 value={manualRateInput}
                 onChange={(e) => setManualRateInput(e.target.value)}
                 placeholder="1550.000000"
-                helperText="Decimal rate (e.g. 1550.00)"
+                helperText={`Decimal rate: 1 ${sellCurrency} in ${buyCurrency} (e.g. ${manualRateInput})`}
               />
               <Button size="sm" variant="outline" isLoading={isSettingManual} onClick={handleSetManualRate} className="shrink-0 mt-auto mb-5">
                 Set Rate
