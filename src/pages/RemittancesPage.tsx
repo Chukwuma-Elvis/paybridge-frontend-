@@ -16,7 +16,7 @@ export const RemittancesPage: React.FC = () => {
   const session = useSessionStore();
 
   // Form State
-  const [partnerCode, setPartnerCode] = useState('US_PARTNER');
+  const [partnerCode, setPartnerCode] = useState('fakepartner');
   const [quoteId, setQuoteId] = useState('');
   const [senderName, setSenderName] = useState('John Doe');
   const [senderCountry, setSenderCountry] = useState('US');
@@ -199,11 +199,14 @@ export const RemittancesPage: React.FC = () => {
         <Card title="Initiate Cross-Border Remittance" subtitle="Binds an active FX quote to sender and recipient">
           <form onSubmit={handleCreateRemittance} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Partner Code"
+              <Select
+                label="Corridor Partner"
                 value={partnerCode}
                 onChange={(e) => setPartnerCode(e.target.value)}
-                placeholder="US_PARTNER"
+                options={[
+                  { label: 'fakepartner (Default Sandbox Partner)', value: 'fakepartner' },
+                  { label: 'us_partner (US Remittance Corridor)', value: 'us_partner' },
+                ]}
               />
               <Input
                 label="Quote ID (UUID)"

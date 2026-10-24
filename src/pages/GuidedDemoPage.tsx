@@ -266,7 +266,7 @@ export const GuidedDemoPage: React.FC = () => {
         path: '/api/remittances',
         idempotencyKey: generateIdempotencyKey('remit'),
         body: {
-          partnerCode: 'US_PARTNER',
+          partnerCode: 'fakepartner',
           partnerReference: `PART-${Date.now()}`,
           quoteId,
           sender: {

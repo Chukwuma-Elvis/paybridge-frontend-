@@ -5,6 +5,7 @@ import { formatMoney } from '../utils/money';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { Badge } from '../components/common/Badge';
 import { StateView } from '../components/common/StateView';
 import { Scale, Upload, FileText, CheckCircle2, AlertTriangle, ArrowRight, Download, RefreshCw, Send, DollarSign } from 'lucide-react';
@@ -13,7 +14,7 @@ import { toast } from 'sonner';
 export const SettlementPage: React.FC = () => {
   const session = useSessionStore();
 
-  const [partner, setPartner] = useState('US_PARTNER');
+  const [partner, setPartner] = useState('fakepartner');
   const [position, setPosition] = useState<any>(null);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
@@ -250,14 +251,27 @@ export const SettlementPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Scale className="w-5 h-5 text-blue-600" />
-          <span>Settlement & Partner Statement Reconciliation</span>
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Close daily settlement batches, instruct payouts, upload partner bank statement CSVs, and reconcile breaks to zero balance.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Scale className="w-5 h-5 text-blue-600" />
+            <span>Settlement & Partner Statement Reconciliation</span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Close daily settlement batches, instruct payouts, upload partner bank statement CSVs, and reconcile breaks to zero balance.
+          </p>
+        </div>
+        <div className="w-64">
+          <Select
+            label="Settlement Partner"
+            value={partner}
+            onChange={(e) => setPartner(e.target.value)}
+            options={[
+              { label: 'fakepartner (Sandbox Default)', value: 'fakepartner' },
+              { label: 'us_partner (US Corridor)', value: 'us_partner' },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Position Overview & Close Batch */}
