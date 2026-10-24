@@ -35,11 +35,18 @@ export const RemittancesPage: React.FC = () => {
     const urlQuoteId = searchParams.get('quoteId');
     if (urlQuoteId) {
       setQuoteId(urlQuoteId);
-      return;
+    } else if (!quoteId && recentQuotes.length > 0) {
+      setQuoteId(recentQuotes[0].id);
     }
 
-    if (!quoteId && recentQuotes.length > 0) {
-      setQuoteId(recentQuotes[0].id);
+    const urlSenderName = searchParams.get('senderName');
+    if (urlSenderName) {
+      setSenderName(urlSenderName);
+    }
+
+    const urlSenderCountry = searchParams.get('senderCountry');
+    if (urlSenderCountry) {
+      setSenderCountry(urlSenderCountry);
     }
   }, [searchParams, session.recentEntities]);
 
