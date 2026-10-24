@@ -36,6 +36,10 @@ export const ConnectPage: React.FC = () => {
 
   const [keyInput, setKeyInput] = useState(session.apiKey);
   const [showKey, setShowKey] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'ADMIN' | 'CLIENT'>(
+    session.keyRole === 'ADMIN' ? 'ADMIN' : 'ADMIN'
+  );
+  const [isVerifyingKey, setIsVerifyingKey] = useState(false);
   const [systemInfo, setSystemInfo] = useState<any>(null);
   const [loadingInfo, setLoadingInfo] = useState(false);
 
@@ -46,6 +50,12 @@ export const ConnectPage: React.FC = () => {
   useEffect(() => {
     setKeyInput(session.apiKey);
   }, [session.apiKey]);
+
+  useEffect(() => {
+    if (session.keyRole && session.keyRole !== 'ANONYMOUS') {
+      setSelectedRole(session.keyRole);
+    }
+  }, [session.keyRole]);
 
   // Try to load system info if an admin key is present
   useEffect(() => {
@@ -87,6 +97,31 @@ export const ConnectPage: React.FC = () => {
     wake.checkHealthOnce();
   };
 
+  const handleVerifyKey = async () => {
+    const key = keyInput.trim() || session.apiKey;
+    if (!key) {
+      toast.error('Please enter an API key first');
+      return;
+    }
+
+    setIsVerifyingKey(true);
+    try {
+      const verified = await session.verifyKeyRole(key);
+      setSelectedRole(verified === 'ADMIN' ? 'ADMIN' : 'CLIENT');
+      if (verified === 'ADMIN') {
+        toast.success('Server verified: This key has ADMIN privileges!');
+      } else if (verified === 'CLIENT') {
+        toast.info('Server verified: This key has CLIENT privileges (transfers & quotes).');
+      } else {
+        toast.error('Server did not recognize this key (401 Unauthorized)');
+      }
+    } catch {
+      toast.error('Failed to connect to server for verification');
+    } finally {
+      setIsVerifyingKey(false);
+    }
+  };
+
   const handleSaveKey = () => {
     if (!keyInput.trim()) {
       session.clearKey();
@@ -94,8 +129,8 @@ export const ConnectPage: React.FC = () => {
       return;
     }
 
-    session.setApiKey(keyInput.trim());
-    toast.success(`Key saved with ${session.keyRole} role.`);
+    session.setApiKey(keyInput.trim(), selectedRole);
+    toast.success(`Key saved with ${selectedRole} privileges.`);
   };
 
   return (
@@ -246,14 +281,14 @@ export const ConnectPage: React.FC = () => {
 
         {/* Card 3: API Key Desk */}
         <Card
-          title="Session API Key"
+          title="Session API Key & Role Privileges"
           subtitle="Pasted key lives in memory (opt-in session storage only; never stored in localStorage or URL)"
         >
           <div className="space-y-4">
             <div>
               <div className="relative">
                 <Input
-                  label="Paste API Key (Client or Admin)"
+                  label="API Key (Hex or pb_...)"
                   isMono
                   type={showKey ? 'text' : 'password'}
                   value={keyInput}
@@ -270,14 +305,80 @@ export const ConnectPage: React.FC = () => {
                 </button>
               </div>
 
+              {/* Current Active Key & Live Status */}
               {session.apiKey && (
-                <div className="mt-2 text-xs font-mono text-slate-500 flex items-center justify-between">
-                  <span>Current Key: {maskKey(session.apiKey)}</span>
-                  <Badge variant={session.keyRole === 'ADMIN' ? 'accent' : 'neutral'} size="sm">
-                    {session.keyRole} Privileges
-                  </Badge>
+                <div className="mt-3 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 font-mono text-slate-600 dark:text-slate-300">
+                    <Key className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Active: {maskKey(session.apiKey)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={session.keyRole === 'ADMIN' ? 'accent' : 'neutral'} size="sm">
+                      {session.keyRole === 'ADMIN' ? '👑 ADMIN Privileges' : '👤 CLIENT Privileges'}
+                    </Badge>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRole = session.keyRole === 'ADMIN' ? 'CLIENT' : 'ADMIN';
+                        session.setKeyRole(newRole);
+                        setSelectedRole(newRole);
+                        toast.success(`Role switched to ${newRole}`);
+                      }}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    >
+                      Switch to {session.keyRole === 'ADMIN' ? 'CLIENT' : 'ADMIN'}
+                    </button>
+                  </div>
                 </div>
               )}
+            </div>
+
+            {/* Role Privilege Selection */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                Key Privilege Level
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('ADMIN')}
+                  className={`p-2.5 rounded-md border text-left flex flex-col gap-1 transition-all ${
+                    selectedRole === 'ADMIN'
+                      ? 'border-purple-500 bg-purple-50/60 dark:bg-purple-950/30 text-purple-900 dark:text-purple-200 font-medium ring-1 ring-purple-500'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <span>👑 ADMIN</span>
+                    </span>
+                    {selectedRole === 'ADMIN' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
+                  </div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    Full access: Settlement, API keys, screening lists, DB purge & reset.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('CLIENT')}
+                  className={`p-2.5 rounded-md border text-left flex flex-col gap-1 transition-all ${
+                    selectedRole === 'CLIENT'
+                      ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200 font-medium ring-1 ring-blue-500'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <span>👤 CLIENT</span>
+                    </span>
+                    {selectedRole === 'CLIENT' && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
+                  </div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    Partner access: Customer transfers, FX quotes, accounts, beneficiaries.
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -293,12 +394,22 @@ export const ConnectPage: React.FC = () => {
               </label>
             </div>
 
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveKey}>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button size="sm" onClick={handleSaveKey} icon={<Key className="w-3.5 h-3.5" />}>
                 Save Key
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleVerifyKey}
+                isLoading={isVerifyingKey}
+                icon={<ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                title="Probes the backend API to verify whether this key has ADMIN or CLIENT authorization"
+              >
+                Verify Role with Server
+              </Button>
               {session.apiKey && (
-                <Button size="sm" variant="outline" onClick={() => session.clearKey()}>
+                <Button size="sm" variant="ghost" onClick={() => session.clearKey()} className="text-slate-500">
                   Forget Key
                 </Button>
               )}

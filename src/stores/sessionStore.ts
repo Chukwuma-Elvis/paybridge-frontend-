@@ -31,6 +31,8 @@ interface SessionState {
   setBackendUrl: (url: string) => { success: boolean; error?: string; warning?: string };
   resetBackendUrl: () => void;
   setApiKey: (key: string, role?: KeyRole) => void;
+  setKeyRole: (role: KeyRole) => void;
+  verifyKeyRole: (keyToVerify?: string) => Promise<KeyRole>;
   setRememberKeyInSession: (remember: boolean) => void;
   setAutoWake: (autoWake: boolean) => void;
   clearKey: () => void;
@@ -102,7 +104,7 @@ function loadInitialApiKey(): { key: string; role: KeyRole } {
     const savedKey = sessionStorage.getItem(SESSION_KEY_API_KEY);
     const savedRole = sessionStorage.getItem(SESSION_KEY_ROLE) as KeyRole | null;
     if (savedKey) {
-      return { key: savedKey, role: savedRole || 'CLIENT' };
+      return { key: savedKey, role: savedRole || 'ADMIN' };
     }
   } catch {
     // ignore
@@ -174,12 +176,11 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
     setApiKey: (key: string, role?: KeyRole) => {
       const trimmed = key.trim();
-      let detectedRole: KeyRole = role || 'CLIENT';
-      if (!role) {
-        // Simple heuristic: admin keys in paybridge typically start with 'adm' or are configured as such
-        if (trimmed.toLowerCase().includes('admin') || trimmed.startsWith('adm-')) {
-          detectedRole = 'ADMIN';
-        }
+      let detectedRole: KeyRole = role || (trimmed ? (get().keyRole !== 'ANONYMOUS' ? get().keyRole : 'ADMIN') : 'ANONYMOUS');
+      if (role) {
+        detectedRole = role;
+      } else if (trimmed.toLowerCase().includes('admin') || trimmed.startsWith('adm-')) {
+        detectedRole = 'ADMIN';
       }
 
       if (get().rememberKeyInSession) {
@@ -200,6 +201,53 @@ export const useSessionStore = create<SessionState>((set, get) => {
         apiKey: trimmed,
         keyRole: trimmed ? detectedRole : 'ANONYMOUS',
       });
+
+      // Background probe: if key was provided and no explicit role was passed, verify against server
+      if (trimmed && !role) {
+        get().verifyKeyRole(trimmed).catch(() => {});
+      }
+    },
+
+    setKeyRole: (role: KeyRole) => {
+      set({ keyRole: role });
+      if (get().rememberKeyInSession && get().apiKey) {
+        try {
+          sessionStorage.setItem(SESSION_KEY_ROLE, role);
+        } catch {
+          // ignore
+        }
+      }
+    },
+
+    verifyKeyRole: async (keyToVerify?: string): Promise<KeyRole> => {
+      const activeKey = (keyToVerify || get().apiKey).trim();
+      if (!activeKey) {
+        set({ keyRole: 'ANONYMOUS' });
+        return 'ANONYMOUS';
+      }
+
+      try {
+        const res = await fetch(`${get().backendUrl}/api/admin/api-keys`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'X-API-Key': activeKey,
+            'X-Request-Id': `probe-${Date.now().toString(36)}`,
+          },
+        });
+
+        if (res.ok) {
+          get().setKeyRole('ADMIN');
+          return 'ADMIN';
+        } else if (res.status === 403) {
+          get().setKeyRole('CLIENT');
+          return 'CLIENT';
+        }
+      } catch {
+        // network or server asleep
+      }
+
+      return get().keyRole;
     },
 
     setRememberKeyInSession: (remember: boolean) => {

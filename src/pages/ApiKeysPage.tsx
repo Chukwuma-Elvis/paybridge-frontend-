@@ -22,6 +22,7 @@ export const ApiKeysPage: React.FC = () => {
 
   // One-time plaintext reveal modal/banner
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [revealedKeyRole, setRevealedKeyRole] = useState<'CLIENT' | 'ADMIN'>('CLIENT');
   const [copied, setCopied] = useState(false);
 
   const loadKeys = async () => {
@@ -67,6 +68,7 @@ export const ApiKeysPage: React.FC = () => {
       const newKey = res.data;
       const keyString = newKey.apiKey || newKey.plaintext || '';
       setRevealedKey(keyString);
+      setRevealedKeyRole(role);
       setKeys((prev) => [newKey, ...prev]);
       setKeyName('');
       toast.success('API key generated! Copy it now; it cannot be shown again.');
@@ -102,8 +104,8 @@ export const ApiKeysPage: React.FC = () => {
 
   const handleUseKeyInSession = () => {
     if (revealedKey) {
-      session.setApiKey(revealedKey);
-      toast.success('Active console API key updated to this new key!');
+      session.setApiKey(revealedKey, revealedKeyRole);
+      toast.success(`Active console API key updated to this new ${revealedKeyRole} key!`);
     }
   };
 
@@ -149,6 +151,30 @@ export const ApiKeysPage: React.FC = () => {
         </p>
       </div>
 
+      {/* Role Notice if Active Key is CLIENT */}
+      {session.apiKey && session.keyRole === 'CLIENT' && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-md text-xs text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Your active key is currently operating in <strong>CLIENT</strong> mode. API Key management endpoints require <strong>ADMIN</strong> privileges.
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => {
+              session.setKeyRole('ADMIN');
+              toast.success('Active key role switched to ADMIN.');
+              loadKeys();
+            }}
+            className="shrink-0 text-xs"
+          >
+            Switch Active Key to ADMIN
+          </Button>
+        </div>
+      )}
+
       {/* One-Time Plaintext Reveal Notice */}
       {revealedKey && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-lg space-y-3">
@@ -156,6 +182,9 @@ export const ApiKeysPage: React.FC = () => {
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-950 dark:text-emerald-100">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>New API Key Generated (Plaintext - Copy Now)</span>
+              <Badge variant={revealedKeyRole === 'ADMIN' ? 'accent' : 'neutral'} size="sm">
+                {revealedKeyRole === 'ADMIN' ? '👑 ADMIN' : '👤 CLIENT'}
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -164,7 +193,7 @@ export const ApiKeysPage: React.FC = () => {
                 onClick={handleUseKeyInSession}
                 icon={<KeyRound className="w-3.5 h-3.5 text-blue-600" />}
               >
-                Use in Console
+                Use in Console ({revealedKeyRole})
               </Button>
               <Button
                 size="sm"

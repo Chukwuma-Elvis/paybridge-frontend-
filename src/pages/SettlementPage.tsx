@@ -338,9 +338,22 @@ export const SettlementPage: React.FC = () => {
               Settlement endpoints require an <strong>ADMIN</strong> API key. Your active key has <strong>CLIENT</strong> privileges.
             </span>
           </div>
-          <Button size="sm" variant="outline" onClick={() => navigate('/admin/keys')} className="shrink-0 text-xs">
-            Switch to Admin Key
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                session.setKeyRole('ADMIN');
+                toast.success('Active key role switched to ADMIN.');
+              }}
+              className="text-xs"
+            >
+              Switch to ADMIN Privileges
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate('/admin/keys')} className="text-xs">
+              Manage Keys
+            </Button>
+          </div>
         </div>
       )}
 

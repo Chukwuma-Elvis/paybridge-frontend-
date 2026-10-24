@@ -20,6 +20,7 @@ import {
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export const TopBar: React.FC = () => {
   const navigate = useNavigate();
@@ -106,17 +107,39 @@ export const TopBar: React.FC = () => {
 
       {/* Right Controls: Role, Swagger, Inspector, Log */}
       <div className="flex items-center gap-2">
-        {/* Key Role Indicator */}
-        <Link to="/connect">
-          <Badge
-            variant={keyRole === 'ADMIN' ? 'accent' : keyRole === 'CLIENT' ? 'neutral' : 'warning'}
-            size="sm"
-            className="cursor-pointer hover:opacity-85"
-          >
-            <Key className="w-3 h-3 mr-0.5" />
-            <span>{keyRole}</span>
-          </Badge>
-        </Link>
+        {/* Key Role Indicator with 1-Click Role Switch */}
+        {apiKey ? (
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-md p-0.5 border border-slate-200 dark:border-slate-700 text-xs">
+            <button
+              onClick={() => {
+                const newRole = keyRole === 'ADMIN' ? 'CLIENT' : 'ADMIN';
+                useSessionStore.getState().setKeyRole(newRole);
+                toast.success(`Active key role switched to ${newRole}`);
+              }}
+              title={`Active role: ${keyRole}. Click to toggle between ADMIN and CLIENT`}
+              className="flex items-center gap-1 px-2 py-0.5 rounded font-semibold transition-colors hover:bg-white dark:hover:bg-slate-700 shadow-xs"
+            >
+              <Key className="w-3 h-3 text-slate-500" />
+              <span className={keyRole === 'ADMIN' ? 'text-purple-600 dark:text-purple-400 font-bold' : 'text-blue-600 dark:text-blue-400 font-bold'}>
+                {keyRole === 'ADMIN' ? '👑 ADMIN' : '👤 CLIENT'}
+              </span>
+            </button>
+            <Link
+              to="/connect"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-1.5 py-0.5 rounded text-[11px]"
+              title="Configure API Key and settings in Connect"
+            >
+              ⚙
+            </Link>
+          </div>
+        ) : (
+          <Link to="/connect">
+            <Badge variant="warning" size="sm" className="cursor-pointer hover:opacity-85">
+              <Key className="w-3 h-3 mr-0.5" />
+              <span>No Key</span>
+            </Badge>
+          </Link>
+        )}
 
         {/* Swagger Link */}
         <a
