@@ -144,7 +144,7 @@ export const GuidedDemoPage: React.FC = () => {
           method: 'POST',
           path: `/api/dev/accounts/${acc1.data.id}/fund`,
           body: { amountMinor: 10000000 }, // 100,000 NGN
-          label: 'Dev Funding: ₦100,000.00',
+          label: 'Dev Funding: â‚¦100,000.00',
         });
         funded = true;
       } catch {
@@ -152,9 +152,25 @@ export const GuidedDemoPage: React.FC = () => {
       }
 
       session.addRecentEntity({ id: cust1.data.id, label: 'Chukwuma Elvis', type: 'customer' });
-      session.addRecentEntity({ id: acc1.data.id, label: `${acc1.data.accountNumber} (Chukwuma)`, type: 'account' });
+      session.addRecentEntity({
+        id: acc1.data.id,
+        label: `${acc1.data.accountNumber} (Chukwuma)`,
+        type: 'account',
+        details: { ...acc1.data, customerName: 'Chukwuma Elvis' },
+      });
+      session.setSelectedAccount({
+        id: acc1.data.id,
+        accountNumber: acc1.data.accountNumber,
+        customerName: 'Chukwuma Elvis',
+        currency: acc1.data.currency,
+      });
       session.addRecentEntity({ id: cust2.data.id, label: 'Amara Okonkwo', type: 'customer' });
-      session.addRecentEntity({ id: acc2.data.id, label: `${acc2.data.accountNumber} (Amara)`, type: 'account' });
+      session.addRecentEntity({
+        id: acc2.data.id,
+        label: `${acc2.data.accountNumber} (Amara)`,
+        type: 'account',
+        details: { ...acc2.data, customerName: 'Amara Okonkwo' },
+      });
 
       setStepData({
         customer1: cust1.data,
@@ -187,10 +203,10 @@ export const GuidedDemoPage: React.FC = () => {
         body: {
           sourceAccountId: srcId || '00000000-0000-0000-0000-000000000001',
           destinationAccountNumber: destNum,
-          amountMinor: 2500000, // ₦25,000
+          amountMinor: 2500000, // â‚¦25,000
           narration: 'Demo internal transfer',
         },
-        label: replay ? 'Replay Transfer (Idempotency)' : 'Internal Transfer: ₦25,000.00',
+        label: replay ? 'Replay Transfer (Idempotency)' : 'Internal Transfer: â‚¦25,000.00',
       });
 
       setReplayed(replay);
@@ -687,7 +703,7 @@ export const GuidedDemoPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>Amount:</span>
-                        <span className="font-mono font-bold text-emerald-600">₦25,000.00</span>
+                        <span className="font-mono font-bold text-emerald-600">â‚¦25,000.00</span>
                       </div>
                     </div>
                     <Button
@@ -709,7 +725,7 @@ export const GuidedDemoPage: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span>Customer Rate:</span>
-                      <span className="font-mono text-blue-600 font-bold">₦{stepData.quote.customerRate}/$</span>
+                      <span className="font-mono text-blue-600 font-bold">â‚¦{stepData.quote.customerRate}/$</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Sell Amount:</span>
@@ -731,7 +747,7 @@ export const GuidedDemoPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>Corridor:</span>
-                        <span className="font-mono">USD → NGN</span>
+                        <span className="font-mono">USD â†’ NGN</span>
                       </div>
                     </div>
 
@@ -743,7 +759,7 @@ export const GuidedDemoPage: React.FC = () => {
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-mono text-emerald-800 dark:text-emerald-300">
                         <div>USD Total Delta: <strong>$0.00</strong></div>
-                        <div>NGN Total Delta: <strong>₦0.00</strong></div>
+                        <div>NGN Total Delta: <strong>â‚¦0.00</strong></div>
                       </div>
                     </div>
                   </div>

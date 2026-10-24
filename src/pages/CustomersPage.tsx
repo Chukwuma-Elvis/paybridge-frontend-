@@ -246,6 +246,13 @@ export const CustomersPage: React.FC = () => {
         details: newAcc,
       });
 
+      session.setSelectedAccount({
+        id: newAcc.id,
+        accountNumber: newAcc.accountNumber,
+        customerName: newAcc.customerName,
+        currency: newAcc.currency,
+      });
+
       toast.success(`Account ${newAcc.accountNumber} opened!`);
     } catch (err: any) {
       toast.error(err.message);
@@ -278,6 +285,13 @@ export const CustomersPage: React.FC = () => {
         label: `${acc.accountNumber} (${acc.currency})`,
         type: 'account',
         details: acc,
+      });
+
+      session.setSelectedAccount({
+        id: acc.id,
+        accountNumber: acc.accountNumber,
+        customerName: acc.customerName,
+        currency: acc.currency,
       });
 
       toast.success(`Found account ${acc.accountNumber} (${acc.currency})!`);
@@ -506,11 +520,13 @@ export const CustomersPage: React.FC = () => {
                 {accountsList.map((acc) => {
                   const owner = customersList.find((c) => c.id === acc.customerId);
                   const ownerName = acc.customerName || (owner ? `${owner.firstName} ${owner.lastName}` : 'Customer');
+                  const isAccSelected = session.selectedAccount?.accountNumber === acc.accountNumber;
 
                   return (
-                    <tr key={acc.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/60 font-mono">
-                      <td className="px-3 py-2 font-bold text-blue-600 dark:text-blue-400">
-                        {acc.accountNumber}
+                    <tr key={acc.id} className={`hover:bg-slate-50/60 dark:hover:bg-slate-900/60 font-mono ${isAccSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}>
+                      <td className="px-3 py-2 font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                        <span>{acc.accountNumber}</span>
+                        {isAccSelected && <Badge variant="accent" size="sm">Recipient</Badge>}
                       </td>
                       <td className="px-3 py-2 font-sans text-slate-700 dark:text-slate-300">
                         {ownerName}
@@ -525,6 +541,23 @@ export const CustomersPage: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-right space-x-2 font-sans">
+                        <Button
+                          size="sm"
+                          variant={isAccSelected ? 'secondary' : 'outline'}
+                          onClick={() => {
+                            session.setSelectedAccount({
+                              id: acc.id,
+                              accountNumber: acc.accountNumber,
+                              customerName: ownerName,
+                              currency: acc.currency,
+                            });
+                            toast.success(`Account ${acc.accountNumber} (${ownerName}) selected as recipient!`);
+                          }}
+                          icon={isAccSelected ? <Check className="w-3.5 h-3.5 text-blue-600" /> : undefined}
+                          title="Select as default recipient account for remittances"
+                        >
+                          {isAccSelected ? 'Selected' : 'Select'}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"

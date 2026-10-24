@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useSessionStore } from '../stores/sessionStore';
 import { apiRequest, generateIdempotencyKey } from '../services/apiClient';
 import { formatMoney, verifyLedgerProof } from '../utils/money';
@@ -9,13 +10,16 @@ import { Select } from '../components/common/Select';
 import { Badge } from '../components/common/Badge';
 import { StateView } from '../components/common/StateView';
 import { Globe, Plus, CheckCircle2, ShieldAlert, Clock, Sparkles, AlertCircle, RefreshCw, Layers } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export const RemittancesPage: React.FC = () => {
   const session = useSessionStore();
 
   // Form State
+  const [searchParams] = useSearchParams();
+  const recentQuotes = session.recentEntities.filter((e) => e.type === 'quote');
+  const recentAccounts = session.recentEntities.filter((e) => e.type === 'account');
+
   const [partnerCode, setPartnerCode] = useState('fakepartner');
   const [quoteId, setQuoteId] = useState('');
   const [senderName, setSenderName] = useState('John Doe');
@@ -25,6 +29,43 @@ export const RemittancesPage: React.FC = () => {
   const [recipientAccount, setRecipientAccount] = useState('1000000001');
   const [bankCode, setBankCode] = useState('044');
   const [isCreating, setIsCreating] = useState(false);
+
+  // Auto-fill most recent quote UUID from session or URL
+  useEffect(() => {
+    const urlQuoteId = searchParams.get('quoteId');
+    if (urlQuoteId) {
+      setQuoteId(urlQuoteId);
+      return;
+    }
+
+    if (!quoteId && recentQuotes.length > 0) {
+      setQuoteId(recentQuotes[0].id);
+    }
+  }, [searchParams, session.recentEntities]);
+
+  // Auto-fill selected account from accounts as the recipient
+  useEffect(() => {
+    if (session.selectedAccount) {
+      setRecipientAccount(session.selectedAccount.accountNumber);
+      if (session.selectedAccount.customerName) {
+        setRecipientName(session.selectedAccount.customerName);
+      }
+      setRecipientType('PAYBRIDGE');
+      return;
+    }
+
+    if (recentAccounts.length > 0) {
+      const topAcc = recentAccounts[0];
+      const accNum = topAcc.details?.accountNumber || topAcc.label.split(' ')[0];
+      if (accNum && accNum.length === 10) {
+        setRecipientAccount(accNum);
+      }
+      if (topAcc.details?.customerName) {
+        setRecipientName(topAcc.details.customerName);
+      }
+      setRecipientType('PAYBRIDGE');
+    }
+  }, [session.selectedAccount, session.recentEntities]);
 
   // List of remittances
   const [remittancesList, setRemittancesList] = useState<any[]>([]);
@@ -198,6 +239,29 @@ export const RemittancesPage: React.FC = () => {
         {/* Create Remittance Form */}
         <Card title="Initiate Cross-Border Remittance" subtitle="Binds an active FX quote to sender and recipient">
           <form onSubmit={handleCreateRemittance} className="space-y-3">
+            {(quoteId || recipientAccount) && (
+              <div className="p-2.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold text-blue-900 dark:text-blue-200">Auto-filled:</span>{' '}
+                    {quoteId && (
+                      <span className="font-mono text-blue-700 dark:text-blue-300">
+                        Quote {quoteId.slice(0, 8)}...
+                      </span>
+                    )}
+                    {quoteId && recipientAccount && ' • '}
+                    {recipientAccount && (
+                      <span className="font-medium text-blue-700 dark:text-blue-300">
+                        Recipient: {recipientAccount} {recipientName ? `(${recipientName})` : ''}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <Badge variant="accent" size="sm">Auto-loaded</Badge>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <Select
                 label="Corridor Partner"
@@ -208,19 +272,35 @@ export const RemittancesPage: React.FC = () => {
                   { label: 'us_partner (US Remittance Corridor)', value: 'us_partner' },
                 ]}
               />
-              <Input
-                label="Quote ID (UUID)"
-                isMono
-                required
-                value={quoteId}
-                onChange={(e) => setQuoteId(e.target.value)}
-                placeholder="Paste quote id..."
-                helperText={
-                  session.recentEntities.find((e) => e.type === 'quote')
-                    ? `Recent: ${session.recentEntities.find((e) => e.type === 'quote')?.id}`
-                    : undefined
-                }
-              />
+              <div className="space-y-1">
+                <Input
+                  label="Quote ID (UUID)"
+                  isMono
+                  required
+                  value={quoteId}
+                  onChange={(e) => setQuoteId(e.target.value)}
+                  placeholder="Paste quote id..."
+                />
+                {recentQuotes.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                    <span className="text-[10px] text-slate-400">Quotes:</span>
+                    {recentQuotes.slice(0, 3).map((q) => (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() => setQuoteId(q.id)}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors ${
+                          quoteId === q.id
+                            ? 'bg-blue-100 dark:bg-blue-900/60 border-blue-400 text-blue-800 dark:text-blue-200 font-semibold'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-blue-300'
+                        }`}
+                      >
+                        {q.label.slice(0, 22)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -271,15 +351,45 @@ export const RemittancesPage: React.FC = () => {
                   ]}
                 />
               )}
-              <Input
-                label="10-Digit Recipient Account Number"
-                isMono
-                required
-                maxLength={10}
-                value={recipientAccount}
-                onChange={(e) => setRecipientAccount(e.target.value)}
-                placeholder="1000000001"
-              />
+              <div className="space-y-1">
+                <Input
+                  label="10-Digit Recipient Account Number"
+                  isMono
+                  required
+                  maxLength={10}
+                  value={recipientAccount}
+                  onChange={(e) => setRecipientAccount(e.target.value)}
+                  placeholder="1000000001"
+                />
+                {recentAccounts.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                    <span className="text-[10px] text-slate-400">Accounts:</span>
+                    {recentAccounts.slice(0, 3).map((a) => {
+                      const num = a.details?.accountNumber || a.label.split(' ')[0];
+                      const name = a.details?.customerName;
+                      const isSel = recipientAccount === num;
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => {
+                            setRecipientAccount(num);
+                            if (name) setRecipientName(name);
+                            setRecipientType('PAYBRIDGE');
+                          }}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors ${
+                            isSel
+                              ? 'bg-blue-100 dark:bg-blue-900/60 border-blue-400 text-blue-800 dark:text-blue-200 font-semibold'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-blue-300'
+                          }`}
+                        >
+                          {num} {name ? `(${name.split(' ')[0]})` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             <Button type="submit" isLoading={isCreating} icon={<Plus className="w-4 h-4" />}>

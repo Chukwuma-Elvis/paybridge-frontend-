@@ -11,6 +11,13 @@ export interface RecentEntity {
   createdAt: string;
 }
 
+export interface SelectedAccount {
+  id: string;
+  accountNumber: string;
+  customerName?: string;
+  currency?: string;
+}
+
 interface SessionState {
   backendUrl: string;
   recentUrls: string[];
@@ -19,6 +26,7 @@ interface SessionState {
   rememberKeyInSession: boolean;
   autoWake: boolean;
   recentEntities: RecentEntity[];
+  selectedAccount: SelectedAccount | null;
 
   setBackendUrl: (url: string) => { success: boolean; error?: string; warning?: string };
   resetBackendUrl: () => void;
@@ -28,6 +36,7 @@ interface SessionState {
   clearKey: () => void;
   addRecentEntity: (entity: Omit<RecentEntity, 'createdAt'>) => void;
   clearRecentEntities: () => void;
+  setSelectedAccount: (account: SelectedAccount | null) => void;
 }
 
 const DEFAULT_BACKEND_URL = (import.meta.env.VITE_DEFAULT_BACKEND_URL as string) || 'https://paybridge-xsf2.onrender.com';
@@ -37,6 +46,17 @@ const STORAGE_KEY_AUTO_WAKE = 'paybridge_auto_wake';
 const SESSION_KEY_API_KEY = 'paybridge_session_api_key';
 const SESSION_KEY_ROLE = 'paybridge_session_role';
 const STORAGE_KEY_RECENT_ENTITIES = 'paybridge_recent_entities';
+const STORAGE_KEY_SELECTED_ACCOUNT = 'paybridge_selected_account';
+
+function loadInitialSelectedAccount(): SelectedAccount | null {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY_SELECTED_ACCOUNT);
+    if (saved) return JSON.parse(saved);
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 function loadInitialRecentEntities(): RecentEntity[] {
   try {
@@ -101,6 +121,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     rememberKeyInSession: Boolean(initialKey.key),
     autoWake: localStorage.getItem(STORAGE_KEY_AUTO_WAKE) !== 'false',
     recentEntities: loadInitialRecentEntities(),
+    selectedAccount: loadInitialSelectedAccount(),
 
     setBackendUrl: (urlInput: string) => {
       const validation = validateBackendAddress(urlInput);
@@ -130,6 +151,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
         try {
           sessionStorage.removeItem(STORAGE_KEY_RECENT_ENTITIES);
+          sessionStorage.removeItem(STORAGE_KEY_SELECTED_ACCOUNT);
         } catch {
           // ignore
         }
@@ -139,6 +161,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
           apiKey: '',
           keyRole: 'ANONYMOUS',
           recentEntities: [],
+          selectedAccount: null,
         });
       }
 
@@ -236,6 +259,19 @@ export const useSessionStore = create<SessionState>((set, get) => {
         // ignore
       }
       set({ recentEntities: [] });
+    },
+
+    setSelectedAccount: (account) => {
+      try {
+        if (account) {
+          sessionStorage.setItem(STORAGE_KEY_SELECTED_ACCOUNT, JSON.stringify(account));
+        } else {
+          sessionStorage.removeItem(STORAGE_KEY_SELECTED_ACCOUNT);
+        }
+      } catch {
+        // ignore
+      }
+      set({ selectedAccount: account });
     },
   };
 });

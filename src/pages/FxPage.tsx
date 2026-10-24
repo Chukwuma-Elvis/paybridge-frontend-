@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useSessionStore } from '../stores/sessionStore';
 import { apiRequest, generateIdempotencyKey } from '../services/apiClient';
 import { formatMoney, parseMoney, CURRENCIES } from '../utils/money';
@@ -130,6 +131,7 @@ export const FxPage: React.FC = () => {
         id: quote.id,
         label: `Quote ${quote.reference} (${formatMoney(quote.sellMinor, sellCurrency)})`,
         type: 'quote',
+        details: quote,
       });
 
       toast.success('FX quote locked with live countdown timer!');
@@ -249,9 +251,9 @@ export const FxPage: React.FC = () => {
               value={corridor}
               onChange={(e) => setCorridor(e.target.value as any)}
               options={[
-                { label: 'USD → NGN (US Dollar to Nigerian Naira)', value: 'USD_NGN' },
-                { label: 'GBP → NGN (British Pound to Nigerian Naira)', value: 'GBP_NGN' },
-                { label: 'EUR → NGN (Euro to Nigerian Naira)', value: 'EUR_NGN' },
+                { label: 'USD â†’ NGN (US Dollar to Nigerian Naira)', value: 'USD_NGN' },
+                { label: 'GBP â†’ NGN (British Pound to Nigerian Naira)', value: 'GBP_NGN' },
+                { label: 'EUR â†’ NGN (Euro to Nigerian Naira)', value: 'EUR_NGN' },
               ]}
             />
 
@@ -374,6 +376,14 @@ export const FxPage: React.FC = () => {
                   </div>
                 );
               })()}
+
+              <div className="pt-2 flex justify-end">
+                <Link to={`/remittances?quoteId=${activeQuote.id}`}>
+                  <Button size="sm" variant="primary" icon={<ArrowRight className="w-3.5 h-3.5" />}>
+                    Use in Remittance
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
         </Card>
