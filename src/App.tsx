@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { Shell } from '@/components/layout/Shell';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 // Route-level code splitting for optimal bundle performance
 const ConnectPage = lazy(() => import('@/pages/ConnectPage').then((m) => ({ default: m.ConnectPage })));
@@ -41,29 +42,31 @@ export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={<PageLoadingFallback />}>
-          <Routes>
-            <Route path="/" element={<Shell />}>
-              <Route index element={<Navigate to="/guided/1" replace />} />
-              <Route path="connect" element={<ConnectPage />} />
-              <Route path="guided" element={<Navigate to="/guided/1" replace />} />
-              <Route path="guided/:step" element={<GuidedDemoPage />} />
-              <Route path="customers" element={<CustomersPage />} />
-              <Route path="accounts/:id" element={<AccountDetailPage />} />
-              <Route path="transfers/internal" element={<InternalTransfersPage />} />
-              <Route path="transfers/external" element={<ExternalTransfersPage />} />
-              <Route path="fx" element={<FxPage />} />
-              <Route path="remittances" element={<RemittancesPage />} />
-              <Route path="remittances/:id" element={<RemittancesPage />} />
-              <Route path="compliance" element={<CompliancePage />} />
-              <Route path="settlement" element={<SettlementPage />} />
-              <Route path="admin/keys" element={<ApiKeysPage />} />
-              <Route path="admin/security" element={<SecurityPlaygroundPage />} />
-              <Route path="ops" element={<OperationsPage />} />
-              <Route path="*" element={<Navigate to="/guided/1" replace />} />
-            </Route>
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<Shell />}>
+                <Route index element={<Navigate to="/guided/1" replace />} />
+                <Route path="connect" element={<ConnectPage />} />
+                <Route path="guided" element={<Navigate to="/guided/1" replace />} />
+                <Route path="guided/:step" element={<GuidedDemoPage />} />
+                <Route path="customers" element={<CustomersPage />} />
+                <Route path="accounts/:id" element={<AccountDetailPage />} />
+                <Route path="transfers/internal" element={<InternalTransfersPage />} />
+                <Route path="transfers/external" element={<ExternalTransfersPage />} />
+                <Route path="fx" element={<FxPage />} />
+                <Route path="remittances" element={<RemittancesPage />} />
+                <Route path="remittances/:id" element={<RemittancesPage />} />
+                <Route path="compliance" element={<CompliancePage />} />
+                <Route path="settlement" element={<SettlementPage />} />
+                <Route path="admin/keys" element={<ApiKeysPage />} />
+                <Route path="admin/security" element={<SecurityPlaygroundPage />} />
+                <Route path="ops" element={<OperationsPage />} />
+                <Route path="*" element={<Navigate to="/guided/1" replace />} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
       <Toaster position="top-right" richColors closeButton />
     </QueryClientProvider>

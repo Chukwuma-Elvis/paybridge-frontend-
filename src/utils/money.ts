@@ -24,10 +24,28 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
 
 /**
  * Formats minor units (e.g. 150000 kobo) into a human-readable string (e.g. "₦1,500.00").
+ * Safely handles undefined, null, or zero values to prevent render crashes.
  */
-export function formatMoney(amountMinor: number | bigint, currency = 'NGN'): string {
-  const conf = CURRENCIES[currency.toUpperCase()] || { code: currency, symbol: currency + ' ', decimals: 2 };
-  const minor = BigInt(amountMinor);
+export function formatMoney(amountMinor: number | bigint | string | undefined | null, currency = 'NGN'): string {
+  const code = (currency || 'NGN').toUpperCase();
+  const conf = CURRENCIES[code] || { code, symbol: currency ? currency + ' ' : '', decimals: 2 };
+
+  let minor = 0n;
+  if (amountMinor !== undefined && amountMinor !== null) {
+    try {
+      if (typeof amountMinor === 'bigint') {
+        minor = amountMinor;
+      } else {
+        const num = Math.round(Number(amountMinor));
+        if (!isNaN(num)) {
+          minor = BigInt(num);
+        }
+      }
+    } catch {
+      minor = 0n;
+    }
+  }
+
   const isNegative = minor < 0n;
   const absMinor = isNegative ? -minor : minor;
 
@@ -45,9 +63,26 @@ export function formatMoney(amountMinor: number | bigint, currency = 'NGN'): str
 /**
  * Converts minor units to raw decimal string without symbol, suitable for inputs or copying.
  */
-export function minorToDecimal(amountMinor: number | bigint, currency = 'NGN'): string {
-  const conf = CURRENCIES[currency.toUpperCase()] || { code: currency, symbol: '', decimals: 2 };
-  const minor = BigInt(amountMinor);
+export function minorToDecimal(amountMinor: number | bigint | string | undefined | null, currency = 'NGN'): string {
+  const code = (currency || 'NGN').toUpperCase();
+  const conf = CURRENCIES[code] || { code, symbol: '', decimals: 2 };
+
+  let minor = 0n;
+  if (amountMinor !== undefined && amountMinor !== null) {
+    try {
+      if (typeof amountMinor === 'bigint') {
+        minor = amountMinor;
+      } else {
+        const num = Math.round(Number(amountMinor));
+        if (!isNaN(num)) {
+          minor = BigInt(num);
+        }
+      }
+    } catch {
+      minor = 0n;
+    }
+  }
+
   const isNegative = minor < 0n;
   const absMinor = isNegative ? -minor : minor;
 

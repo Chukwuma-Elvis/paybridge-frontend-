@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '../stores/sessionStore';
 import { apiRequest } from '../services/apiClient';
 import { formatMoney } from '../utils/money';
@@ -8,11 +9,25 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { Badge } from '../components/common/Badge';
 import { StateView } from '../components/common/StateView';
-import { Scale, Upload, FileText, CheckCircle2, AlertTriangle, ArrowRight, Download, RefreshCw, Send, DollarSign } from 'lucide-react';
+import {
+  Scale,
+  Upload,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  Download,
+  RefreshCw,
+  Send,
+  DollarSign,
+  Clock,
+  Layers,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export const SettlementPage: React.FC = () => {
   const session = useSessionStore();
+  const navigate = useNavigate();
 
   const [partner, setPartner] = useState('fakepartner');
   const [position, setPosition] = useState<any>(null);
@@ -32,6 +47,26 @@ export const SettlementPage: React.FC = () => {
   // Dispute Note
   const [disputeNote, setDisputeNote] = useState('');
 
+  const isClientKey = session.apiKey && session.keyRole === 'CLIENT';
+
+  const formatBatchName = (b: any): string => {
+    if (!b) return 'BATCH-001';
+    if (b.batchNumber) return b.batchNumber;
+    const pCode = (b.partnerCode || partner || 'PARTNER').toUpperCase();
+    if (b.sequence !== undefined && b.sequence !== null) {
+      return `${pCode}-B${String(b.sequence).padStart(3, '0')}`;
+    }
+    return `${pCode}-${String(b.id || '001').slice(0, 8).toUpperCase()}`;
+  };
+
+  const getBatchAmount = (b: any): number => {
+    if (!b) return 0;
+    if (b.closingMinor !== undefined && b.closingMinor !== null) return b.closingMinor;
+    if (b.movementsMinor !== undefined && b.movementsMinor !== null) return b.movementsMinor;
+    if (b.totalAmountMinor !== undefined && b.totalAmountMinor !== null) return b.totalAmountMinor;
+    return 0;
+  };
+
   const loadSettlementData = async () => {
     setIsLoading(true);
     try {
@@ -42,9 +77,12 @@ export const SettlementPage: React.FC = () => {
         label: `Fetch settlement position for ${partner}`,
       }).catch(() => ({
         data: {
-          partner,
+          partnerCode: partner,
           currency: 'USD',
-          unsettledAmountMinor: 125000, // $1,250.00
+          unbatchedMinor: 125000,
+          batchedMinor: 0,
+          accountBalanceMinor: 125000,
+          unbatchedLines: 3,
           asOf: new Date().toISOString(),
         },
       }));
@@ -54,16 +92,18 @@ export const SettlementPage: React.FC = () => {
       const batchRes = await apiRequest({
         method: 'GET',
         path: '/api/admin/settlement/batches',
-        query: { partner, limit: 20 },
+        query: { partner, limit: 50 },
         label: 'Fetch settlement batches',
       }).catch(() => ({
         data: [
           {
             id: 'batch-demo-1',
-            batchNumber: 'BATCH-2026-10-001',
-            partner,
+            batchNumber: `${partner.toUpperCase()}-B001`,
+            partnerCode: partner,
+            sequence: 1,
             currency: 'USD',
-            totalAmountMinor: 125000,
+            closingMinor: 125000,
+            movementsMinor: 125000,
             lineCount: 3,
             status: 'CLOSED',
             closedAt: new Date().toISOString(),
@@ -71,10 +111,19 @@ export const SettlementPage: React.FC = () => {
         ],
       }));
 
-      const bList = batchRes.data || [];
+      const bList = Array.isArray(batchRes.data) ? batchRes.data : [];
       setBatches(bList);
-      if (bList.length > 0 && !selectedBatch) {
-        selectBatch(bList[0]);
+      if (bList.length > 0) {
+        // If current selected batch is in list, keep it, else select first
+        const found = selectedBatch ? bList.find((b: any) => b.id === selectedBatch.id) : null;
+        if (found) {
+          selectBatch(found);
+        } else {
+          selectBatch(bList[0]);
+        }
+      } else {
+        setSelectedBatch(null);
+        setBatchLines([]);
       }
     } finally {
       setIsLoading(false);
@@ -89,17 +138,19 @@ export const SettlementPage: React.FC = () => {
     setSelectedBatch(b);
     setStatementResult(null);
 
+    const bName = formatBatchName(b);
+
     // Load lines & breaks
     try {
       const linesRes = await apiRequest({
         method: 'GET',
         path: `/api/admin/settlement/batches/${b.id}/lines`,
-        label: `Fetch lines for batch ${b.batchNumber}`,
+        label: `Fetch lines for batch ${bName}`,
       }).catch(() => ({
         data: [
-          { id: '1', reference: 'REM-1001', amountMinor: 50000, currency: 'USD', createdAt: new Date().toISOString() },
-          { id: '2', reference: 'REM-1002', amountMinor: 45000, currency: 'USD', createdAt: new Date().toISOString() },
-          { id: '3', reference: 'REM-1003', amountMinor: 30000, currency: 'USD', createdAt: new Date().toISOString() },
+          { id: '1', reference: 'REM-1001', amountMinor: 50000, currency: 'USD', postedAt: new Date().toISOString() },
+          { id: '2', reference: 'REM-1002', amountMinor: 45000, currency: 'USD', postedAt: new Date().toISOString() },
+          { id: '3', reference: 'REM-1003', amountMinor: 30000, currency: 'USD', postedAt: new Date().toISOString() },
         ],
       }));
       setBatchLines(linesRes.data || []);
@@ -107,7 +158,7 @@ export const SettlementPage: React.FC = () => {
       const breaksRes = await apiRequest({
         method: 'GET',
         path: `/api/admin/settlement/batches/${b.id}/breaks`,
-        label: `Fetch breaks for batch ${b.batchNumber}`,
+        label: `Fetch breaks for batch ${bName}`,
       }).catch(() => ({ data: [] }));
       setBreaks(breaksRes.data || []);
     } catch {
@@ -125,13 +176,20 @@ export const SettlementPage: React.FC = () => {
       });
 
       if (res.response.status === 204) {
-        toast.info('No new unsettled transactions to batch.');
+        toast.info(
+          `No new unsettled transactions to batch for ${partner}. Tip: Create a remittance or use dev funding to post ledger movements.`
+        );
       } else {
-        toast.success(`Batch ${res.data.batchNumber} closed!`);
-        loadSettlementData();
+        const created = res.data;
+        const label = formatBatchName(created);
+        toast.success(`Batch ${label} closed!`);
+        await loadSettlementData();
+        if (created?.id) {
+          selectBatch(created);
+        }
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || 'Failed to close settlement batch');
     } finally {
       setIsClosingBatch(false);
     }
@@ -139,51 +197,58 @@ export const SettlementPage: React.FC = () => {
 
   const handleInstruct = async () => {
     if (!selectedBatch) return;
+    const bName = formatBatchName(selectedBatch);
     try {
       const res = await apiRequest({
         method: 'POST',
         path: `/api/admin/settlement/batches/${selectedBatch.id}/instruct`,
-        label: `Instruct batch ${selectedBatch.batchNumber}`,
+        label: `Instruct batch ${bName}`,
       });
       setSelectedBatch(res.data);
-      toast.success('Batch payout instructed!');
+      setBatches((prev) => prev.map((b) => (b.id === res.data.id ? res.data : b)));
+      toast.success(`Batch ${bName} payout instructed!`);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || 'Failed to instruct payout');
     }
   };
 
   const handleConfirm = async () => {
     if (!selectedBatch) return;
+    const bName = formatBatchName(selectedBatch);
     try {
       const res = await apiRequest({
         method: 'POST',
         path: `/api/admin/settlement/batches/${selectedBatch.id}/confirm`,
-        label: `Confirm batch ${selectedBatch.batchNumber}`,
+        label: `Confirm payout for batch ${bName}`,
       });
       setSelectedBatch(res.data);
-      toast.success('Batch settlement payment confirmed!');
+      setBatches((prev) => prev.map((b) => (b.id === res.data.id ? res.data : b)));
+      toast.success(`Batch ${bName} payout confirmed!`);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || 'Failed to confirm payout');
     }
   };
 
   const handleDispute = async () => {
-    if (!selectedBatch || !disputeNote.trim()) {
-      toast.error('A dispute explanation note is required');
+    if (!selectedBatch) return;
+    if (!disputeNote.trim()) {
+      toast.error('Please enter a dispute reason');
       return;
     }
+    const bName = formatBatchName(selectedBatch);
     try {
       const res = await apiRequest({
         method: 'POST',
         path: `/api/admin/settlement/batches/${selectedBatch.id}/dispute`,
-        body: { note: disputeNote },
-        label: `Dispute batch ${selectedBatch.batchNumber}`,
+        body: { note: disputeNote.trim() },
+        label: `Dispute batch ${bName}`,
       });
       setSelectedBatch(res.data);
-      toast.warning('Batch marked as DISPUTED.');
+      setBatches((prev) => prev.map((b) => (b.id === res.data.id ? res.data : b)));
+      toast.warning(`Batch ${bName} marked as DISPUTED.`);
       setDisputeNote('');
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || 'Failed to dispute batch');
     }
   };
 
@@ -220,6 +285,7 @@ export const SettlementPage: React.FC = () => {
       return;
     }
 
+    const bName = formatBatchName(selectedBatch);
     setIsUploadingStatement(true);
     try {
       const res = await apiRequest({
@@ -227,29 +293,57 @@ export const SettlementPage: React.FC = () => {
         path: `/api/admin/settlement/batches/${selectedBatch.id}/statement`,
         headers: { 'Content-Type': 'text/csv' },
         body: csvContent,
-        label: `Upload statement CSV for batch ${selectedBatch.batchNumber}`,
+        label: `Upload statement CSV for batch ${bName}`,
       });
 
-      setStatementResult(res.data);
-      toast.success(`Statement processed: ${res.data.matchedCount} matches, ${res.data.breakCount} breaks.`);
-      selectBatch(selectedBatch);
-    } catch (err: any) {
+      const result = res.data;
+      setStatementResult(result);
+      const matched = result?.matched ?? result?.matchedCount ?? 0;
+      const breaksCount = result?.breaksOpen ?? result?.breakCount ?? 0;
+      toast.success(`Statement processed: ${matched} matched lines, ${breaksCount} open breaks.`);
+      await selectBatch(selectedBatch);
+    } catch {
       // Mock demo reconciliation
       setStatementResult({
         batchId: selectedBatch.id,
-        matchedCount: batchLines.length,
-        breakCount: 0,
+        matched: batchLines.length,
+        breaksOpen: 0,
         duplicate: false,
       });
       setSelectedBatch((prev: any) => ({ ...prev, status: 'RECONCILED' }));
+      setBatches((prev) =>
+        prev.map((b) => (b.id === selectedBatch.id ? { ...b, status: 'RECONCILED' } : b))
+      );
       toast.success('Demo Statement Reconciled: 0 breaks!');
     } finally {
       setIsUploadingStatement(false);
     }
   };
 
+  // Safe Position Values
+  const unbatchedAmount = position?.unbatchedMinor ?? position?.unsettledAmountMinor ?? 0;
+  const batchedAmount = position?.batchedMinor ?? position?.accountBalanceMinor ?? 0;
+  const unbatchedCount = position?.unbatchedLines ?? (unbatchedAmount !== 0 ? 1 : 0);
+  const positionCurrency = position?.currency || 'USD';
+  const partnerCode = position?.partnerCode || position?.partner || partner;
+
   return (
     <div className="space-y-6">
+      {/* Client Key Warning Banner */}
+      {isClientKey && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-md text-xs text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Settlement endpoints require an <strong>ADMIN</strong> API key. Your active key has <strong>CLIENT</strong> privileges.
+            </span>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => navigate('/admin/keys')} className="shrink-0 text-xs">
+            Switch to Admin Key
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -261,63 +355,96 @@ export const SettlementPage: React.FC = () => {
             Close daily settlement batches, instruct payouts, upload partner bank statement CSVs, and reconcile breaks to zero balance.
           </p>
         </div>
-        <div className="w-64">
-          <Select
-            label="Settlement Partner"
-            value={partner}
-            onChange={(e) => setPartner(e.target.value)}
-            options={[
-              { label: 'fakepartner (Sandbox Default)', value: 'fakepartner' },
-              { label: 'us_partner (US Corridor)', value: 'us_partner' },
-            ]}
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="w-64">
+            <Select
+              label="Settlement Partner"
+              value={partner}
+              onChange={(e) => setPartner(e.target.value)}
+              options={[
+                { label: 'fakepartner (Sandbox Default)', value: 'fakepartner' },
+                { label: 'us_partner (US Corridor)', value: 'us_partner' },
+              ]}
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={loadSettlementData}
+            isLoading={isLoading}
+            icon={<RefreshCw className="w-3.5 h-3.5" />}
+            className="mt-5"
+          >
+            Refresh
+          </Button>
         </div>
       </div>
 
       {/* Position Overview & Close Batch */}
-      {position && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Unsettled Position</span>
-            <div className="text-2xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 tabular-nums">
-              {formatMoney(position.unsettledAmountMinor, position.currency)}
-            </div>
-            <span className="text-[11px] text-slate-400 mt-1 block">Partner: {position.partner}</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
+          <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Unbatched Movements</span>
+          <div className="text-2xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 tabular-nums">
+            {formatMoney(unbatchedAmount, positionCurrency)}
           </div>
+          <span className="text-[11px] text-slate-400 mt-1 block">
+            {unbatchedCount} transaction{unbatchedCount === 1 ? '' : 's'} waiting for cut-off
+          </span>
+        </div>
 
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Corridor Settlement Currency</span>
-            <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">
-              {position.currency}
-            </div>
-            <span className="text-[11px] text-slate-400 mt-1 block">Net balance due</span>
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
+          <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Settlement Account Balance</span>
+          <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-1 tabular-nums">
+            {formatMoney(batchedAmount, positionCurrency)}
           </div>
+          <span className="text-[11px] text-slate-400 mt-1 block">
+            Partner: <strong className="font-mono">{partnerCode}</strong> ({positionCurrency})
+          </span>
+        </div>
 
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col justify-between">
-            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Freeze Transactions</span>
-            <div className="pt-2">
-              <Button
-                size="sm"
-                variant="primary"
-                isLoading={isClosingBatch}
-                onClick={handleCloseBatch}
-                icon={<Scale className="w-4 h-4" />}
-              >
-                Close Batch Cut-Off (Now)
-              </Button>
-            </div>
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex flex-col justify-between">
+          <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Freeze Transactions</span>
+          <div className="pt-2">
+            <Button
+              size="sm"
+              variant="primary"
+              isLoading={isClosingBatch}
+              onClick={handleCloseBatch}
+              icon={<Scale className="w-4 h-4" />}
+              className="w-full sm:w-auto"
+            >
+              Close Batch Cut-Off (Now)
+            </Button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Batches & Detail View */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Batches List */}
+        {/* Batches List (1 col) */}
         <div className="lg:col-span-1 space-y-3">
-          <Card title="Batches Queue" subtitle="Closed daily settlement batches">
-            <div className="space-y-2">
+          <Card
+            title="Batches Queue"
+            subtitle={`Closed daily batches (${batches.length})`}
+            actions={
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCloseBatch}
+                isLoading={isClosingBatch}
+                icon={<Scale className="w-3.5 h-3.5" />}
+              >
+                Cut-Off
+              </Button>
+            }
+          >
+            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {batches.map((b) => {
                 const isSelected = selectedBatch?.id === b.id;
+                const bName = formatBatchName(b);
+                const bAmount = getBatchAmount(b);
+                const linesCount = b.lineCount ?? 0;
+
                 return (
                   <button
                     key={b.id}
@@ -329,33 +456,53 @@ export const SettlementPage: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{b.batchNumber}</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{bName}</span>
                       <Badge
                         variant={b.status === 'RECONCILED' ? 'success' : b.status === 'CLOSED' ? 'neutral' : 'accent'}
                         size="sm"
                       >
-                        {b.status}
+                        {b.status || 'CLOSED'}
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center mt-2 font-mono">
-                      <span className="text-slate-500 font-sans">{b.lineCount} lines</span>
+                      <span className="text-slate-500 font-sans">{linesCount} line{linesCount === 1 ? '' : 's'}</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
-                        {formatMoney(b.totalAmountMinor, b.currency)}
+                        {formatMoney(bAmount, b.currency || positionCurrency)}
                       </span>
                     </div>
                   </button>
                 );
               })}
+
+              {batches.length === 0 && (
+                <div className="p-6 text-center text-xs text-slate-500 border border-dashed rounded-lg space-y-2">
+                  <FileText className="w-8 h-8 text-slate-400 mx-auto stroke-1" />
+                  <div className="font-semibold text-slate-700 dark:text-slate-300">No Closed Batches Yet</div>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    No batches have been closed for <strong>{partner}</strong>. Click <strong>Close Batch Cut-Off</strong> to freeze pending transactions into a new batch.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    isLoading={isClosingBatch}
+                    onClick={handleCloseBatch}
+                    icon={<Scale className="w-3.5 h-3.5" />}
+                    className="mt-2"
+                  >
+                    Close Cut-Off Now
+                  </Button>
+                </div>
+              )}
             </div>
           </Card>
         </div>
 
-        {/* Selected Batch Workbench */}
+        {/* Selected Batch Workbench (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
           {selectedBatch ? (
             <Card
-              title={`Batch Workbench: ${selectedBatch.batchNumber}`}
-              subtitle={`Total: ${formatMoney(selectedBatch.totalAmountMinor, selectedBatch.currency)} &bull; Status: ${selectedBatch.status}`}
+              title={`Batch Workbench: ${formatBatchName(selectedBatch)}`}
+              subtitle={`Total: ${formatMoney(getBatchAmount(selectedBatch), selectedBatch.currency || positionCurrency)} • Status: ${selectedBatch.status || 'CLOSED'}`}
             >
               <div className="space-y-6">
                 {/* Actions Ribbon */}
@@ -449,7 +596,7 @@ export const SettlementPage: React.FC = () => {
                         <Badge variant="success">RECONCILED</Badge>
                       </div>
                       <div className="text-emerald-800 dark:text-emerald-300">
-                        Matched Lines: {statementResult.matchedCount} &bull; Breaks Detected: {statementResult.breakCount}
+                        Matched Lines: {statementResult.matched ?? statementResult.matchedCount ?? 0} &bull; Breaks Detected: {statementResult.breaksOpen ?? statementResult.breakCount ?? 0}
                       </div>
                     </div>
                   )}
@@ -458,7 +605,7 @@ export const SettlementPage: React.FC = () => {
                 {/* Batch Lines Table */}
                 <div>
                   <h4 className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Batch Lines ({batchLines.length} transactions)
+                    Batch Lines ({batchLines.length} transaction{batchLines.length === 1 ? '' : 's'})
                   </h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
@@ -470,17 +617,28 @@ export const SettlementPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
-                        {batchLines.map((line) => (
-                          <tr key={line.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/60">
-                            <td className="px-3 py-2 font-bold text-blue-600">{line.reference}</td>
+                        {batchLines.map((line, idx) => (
+                          <tr key={line.id || line.ledgerLineId || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/60">
+                            <td className="px-3 py-2 font-bold text-blue-600">
+                              {line.reference || (line.id ? String(line.id).slice(0, 8) : `LINE-${idx + 1}`)}
+                            </td>
                             <td className="px-3 py-2 text-slate-500 text-[11px]">
-                              {new Date(line.createdAt).toLocaleTimeString()}
+                              {line.postedAt || line.createdAt
+                                ? new Date(line.postedAt || line.createdAt).toLocaleTimeString()
+                                : 'Recent'}
                             </td>
                             <td className="px-3 py-2 text-right font-bold tabular-nums">
-                              {formatMoney(line.amountMinor, line.currency)}
+                              {formatMoney(line.amountMinor, line.currency || selectedBatch.currency || positionCurrency)}
                             </td>
                           </tr>
                         ))}
+                        {batchLines.length === 0 && (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-6 text-center text-slate-400 font-sans">
+                              No ledger lines frozen in this batch.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -488,7 +646,26 @@ export const SettlementPage: React.FC = () => {
               </div>
             </Card>
           ) : (
-            <StateView state="empty" title="Select a settlement batch" />
+            <div className="p-8 text-center text-xs text-slate-500 border border-dashed rounded-lg bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+              <Scale className="w-10 h-10 text-slate-400 mx-auto stroke-1" />
+              <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                Settlement Batch Workbench
+              </div>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Select an existing settlement batch from the queue on the left to instruct payout, upload partner bank statement CSVs, and reconcile transaction breaks.
+              </p>
+              {batches.length === 0 && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  isLoading={isClosingBatch}
+                  onClick={handleCloseBatch}
+                  icon={<Scale className="w-4 h-4" />}
+                >
+                  Close First Settlement Batch
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>
